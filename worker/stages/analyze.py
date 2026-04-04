@@ -513,7 +513,7 @@ EXECUTION_MODE = os.getenv("ZOVARK_EXECUTION_MODE", "tools")  # "tools" (v3) or 
 
 _TOOL_CALLING_SYSTEM_PREFIX = (
     "Select investigation tools for this SIEM alert. "
-    "Output ONLY valid JSON: {\"steps\": [{\"tool\": \"name\", \"args\": {\"arg\": \"value\"}}]}\n\n"
+    'Output ONLY valid JSON: {{"steps": [{{"tool": "name", "args": {{"arg": "value"}}}}]}}\n\n'
     "Rules: Select 3-8 tools. Start with extraction/parsing. Include a scoring or detection tool. "
     "End with correlate_with_history and map_mitre. No prose, no markdown.\n\n"
     "Variable refs: $raw_log = raw log text, $siem_event = full event dict, "
@@ -621,7 +621,13 @@ def _parse_tool_plan(llm_response: str) -> list:
         content = re.sub(r'\n?```$', '', content)
 
     parsed = json.loads(content)
-    steps = parsed.get("steps", parsed if isinstance(parsed, list) else [])
+    if isinstance(parsed, dict):
+        steps = parsed.get("steps", [])
+    elif isinstance(parsed, list):
+        steps = parsed
+    else:
+        activity.logger.warning(f"Path C: unexpected JSON type {type(parsed).__name__}, raw={str(parsed)[:200]}")
+        steps = []
 
     validated = []
     seen_tools = set()
@@ -788,8 +794,9 @@ async def _analyze_v3_tools(ingest: IngestOutput) -> AnalyzeOutput:
             stage="analyze",
             task_type=ingest.task_type,
             tenant_id=ingest.tenant_id,
-            timeout=30.0,
-            response_format={"type": "json_object"},
+            timeout=120.0,  # Path C with full catalog needs more time on CPU inference
+            # No response_format — GBNF grammar handles JSON enforcement.
+            # response_format + grammar can conflict on some llama-server builds.
             role="tool_select",
             grammar_name="tool_selection",
         )
@@ -803,7 +810,8 @@ async def _analyze_v3_tools(ingest: IngestOutput) -> AnalyzeOutput:
             generation_ms=generation_ms,
         )
     except Exception as e:
-        activity.logger.error(f"V3 LLM tool selection failed: {e}")
+        import traceback
+        activity.logger.error(f"V3 LLM tool selection failed: {e}\n{traceback.format_exc()}")
         from stages.circuit_breaker import update_state
         update_state(999)
         return AnalyzeOutput(
