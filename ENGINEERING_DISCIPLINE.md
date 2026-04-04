@@ -256,6 +256,28 @@ grep -rn "ZOVARK_MODEL_FAST\|ZOVARK_MODEL_CODE" --include="*.py" --include="*.go
 
 ---
 
+### /improvement-cycle [N]
+
+**Purpose:** Run a full observe-analyze-plan-execute-verify-document cycle.
+
+**Cadence:** Run after every major feature session, or weekly during active development.
+
+**Steps:**
+1. OBSERVE: zvadmin full suite + DB stats + container resources + worker logs
+2. ANALYZE: Weakness checklist (12 checks) + manual root cause analysis
+3. PLAN: Prioritize findings, create 3-5 issue kanban
+4. EXECUTE: /tdd per issue
+5. VERIFY: regression + model check + resource check
+6. DOCUMENT: CYCLE_REPORT_N.md with before/after metrics
+7. ITERATE: Update framework with process improvements
+
+**Output:** CYCLE_REPORT_N.md (numbered sequentially)
+**Budget:** 1-2 hours per cycle
+**Rule:** Never skip OBSERVE. Data drives decisions, not hunches.
+**Rule:** Low scores on weak test data are CORRECT behavior — don't "fix" evidence-based scoring.
+
+---
+
 ## ANTI-PATTERNS (memorize these)
 
 | Pattern | Why It's Wrong | What To Do |
@@ -270,3 +292,4 @@ grep -rn "ZOVARK_MODEL_FAST\|ZOVARK_MODEL_CODE" --include="*.py" --include="*.go
 | Self-verifying your own output | Confirmation bias | Agent work verified by Verifier |
 | Adding llama-server flags without GBNF test | Can silently disable grammar constraints | Test grammar enforcement before benchmark |
 | Assuming model fits in Docker memory | Gemma 4 E4B needed 7GB, VM had 5.8GB | Check docker stats + docker info before model swaps |
+| "Fixing" low scores on vague test data | Pipeline correctly scores low when raw_log has no evidence | Use realistic SIEM event data in tests, not generic prose |

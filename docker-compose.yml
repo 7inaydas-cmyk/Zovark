@@ -566,7 +566,7 @@ services:
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 256M
           cpus: '0.1'
 
   zovark-vllm-chat:
