@@ -161,6 +161,10 @@ bash autoresearch/telemetry_driven/run.sh --hours 24 --max-tests 15 --wait 120
 | Self-verifying output | Confirmation bias masks errors | Use multi-agent verification |
 | Adding llama-server flags without GBNF test | Can silently disable grammar constraints | Test grammar isolation before benchmark |
 | Assuming model fits in Docker memory | Gemma 4 E4B needed 7GB, VM had 5.8GB — crash loop | Check `docker info` total memory before model swaps |
+| Testing only Path A types in regression | Path C was broken for months, regression never caught it | Add Path C (unknown type) alerts to regression suite |
+| Using str.format() with JSON templates | Literal {} braces are interpreted as format placeholders | Use .replace() or {{ }} escaping for JSON in prompts |
+| Fixing correct low-evidence scores | Generic test data produces low scores — that's correct | Only fix scoring if realistic test data also scores low |
+| Skipping AutoResearch after changes | AutoResearch finds regressions that 15/15 misses | Run AutoResearch after every significant change |
 
 ---
 
@@ -169,7 +173,11 @@ bash autoresearch/telemetry_driven/run.sh --hours 24 --max-tests 15 --wait 120
 ### Engineering Framework
 | File | What |
 |------|------|
-| `ENGINEERING_DISCIPLINE.md` | Claude Code operating framework, slash commands, anti-patterns |
+| `ENGINEERING_DISCIPLINE.md` | Claude Code operating framework, 7 slash commands, anti-patterns |
+| `COMPONENT_REGISTRY.md` | Living system inventory — check before every task |
+| `BENCHMARK_COMPARISON_v3.2.1.md` | Gemma 4 vs Nemotron comparison data |
+| `CYCLE_REPORT_1.md` | Improvement cycle #1 findings and results |
+| `OVERNIGHT_REPORT.md` | Overnight autonomous batch results |
 
 ### Pipeline Stages
 | File | Stage | LLM? |
@@ -221,26 +229,39 @@ bash autoresearch/telemetry_driven/run.sh --hours 24 --max-tests 15 --wait 120
 ## 7. Current State (2026-04-04)
 
 ### Working
-- 15/15 pipeline regression on Gemma 4 E4B via llama-server (swapped from Nemotron 2026-04-04)
-- 13/14 dedup stress test (1 skip = LLM timeout)
+- 15/15 pipeline regression on Gemma 4 E4B via llama-server
+- 13/14 dedup stress test (1 fail = batch severity promotion Go Lua bug)
+- Path C (LLM tool selection for unknown types) — FIXED 2026-04-05
 - Investigation-aware dedup with severity escalation, force reinvestigate
 - SIEM verdict push-back (Splunk HEC + Elastic + webhook)
 - Valkey 7.2 (BSD, replaced Redis)
-- zvadmin CLI (11 commands)
+- zvadmin CLI (12 commands)
 - Telemetry-driven AutoResearch engine
 - Inference optimization (prefix caching, tool pruning, GBNF grammars, dual semaphores)
-- ALL Ollama references purged from active code and docs
+- ALL Ollama references purged from active code
+- Gemma 4 E4B model swap (from Nemotron-Mini-4B) — verified 2026-04-04
+- Output sanitizer for Gemma 4 control tokens (no-op, no activations seen)
+- MITRE ATT&CK propagation: 100% coverage (12 map entries added)
+- Path C tool selection validator (dedup + catalog check + cap)
+- Parallel tool execution (DAG builder + ThreadPoolExecutor, flag-gated, default OFF)
+- Engineering discipline framework (7 slash commands including /improvement-cycle)
+- Component registry (COMPONENT_REGISTRY.md)
+- Web-admin built (dist/, not served yet)
+- RLS migration 065 applied (zovark_app user created, FORCE ROW LEVEL SECURITY on 10 tables)
+- Healer memory leak mitigated (512MB container limit)
+- Improvement Cycle #1 completed with overnight autonomous batch
 
 ### Not Yet Done
-1. Merge v3.1-hardening to master
-2. Build web-admin (`cd web-admin && npm install && npm run build`)
-3. GPU inference (Dockerfile.inference currently CPU-only from source)
-4. A100 benchmark
-5. Switch to zovark_app DB user for RLS enforcement
-
-### Known Calibration Gaps
-- `privilege_escalation_hunt` stddev=49.8 (inconsistent scoring)
-- MITRE coverage 0% for several attack types (not propagating from map_mitre tool to output)
+1. Dedup batch severity promotion fix (Go Lua — 13/14 → 14/14)
+2. Serve web-admin via nginx (built, not deployed)
+3. PgBouncer config for zovark_app user (migration applied, worker still uses superuser)
+4. Healthcare template pack (30 templates)
+5. A100 benchmark with parallel workers
+6. Customer tier dual-inference test on real GPU hardware
+7. Blue/green deployment with auto-rollback
+8. Healer memory leak root cause fix (mitigated, not solved)
+9. Merge v3.3-dev to master when ready
+10. Add Path C alerts to regression suite
 
 ---
 

@@ -1,5 +1,5 @@
 # COMPONENT_REGISTRY.md — Living System Inventory
-# Updated: 2026-04-04 | Version: v3.3-dev
+# Updated: 2026-04-05 | Version: v3.3-dev
 # 
 # PURPOSE: This file prevents the reasoning engine and Claude Code from
 # forgetting components that already exist. Before generating any prompt
@@ -66,6 +66,7 @@
 | AutoResearch Cycle | bash autoresearch/telemetry_driven/run.sh | After any change — finds hidden regressions |
 | Unit Tests | docker compose exec -T worker python -m pytest tests/ -q | After Python changes |
 | Code Cache Flush | scripts/flush_code_cache.sh | After model swap or prompt changes |
+| Path C Smoke Test | Submit unusual_network_traffic via API | After ANY analyze.py or prompt changes |
 
 ## Feature Flags
 | Flag | Default | What it controls |
@@ -111,3 +112,5 @@
 | /improvement-cycle | ENGINEERING_DISCIPLINE.md | Weekly or after major feature sessions |
 | Cycle Reports | CYCLE_REPORT_N.md | Output of each improvement cycle |
 | Benchmark Comparison | BENCHMARK_COMPARISON_v3.2.1.md | Model swap evaluation |
+| Overnight Batch | OVERNIGHT_REPORT.md | Autonomous stress test + fix cycle results |
+| Component Registry | COMPONENT_REGISTRY.md | Living inventory — check before every task |

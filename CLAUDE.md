@@ -11,8 +11,8 @@
 
 | Field | Value |
 |-------|-------|
-| Version | v3.2.1 on v3.1-hardening branch (calibration, dedup redesign, SIEM push-back, Valkey, telemetry engine) |
-| Date | 2026-04-04 |
+| Version | v3.2.1 tagged on master, v3.3-dev active |
+| Date | 2026-04-05 |
 | Status | Production-ready — 40 tools, 24 plans, 100% detection, investigation-aware dedup, SIEM push-back, Valkey cache |
 | Stack | Go API + Python Temporal Worker + React Dashboard + PostgreSQL/pgvector + Valkey (BSD) + LLM inference |
 | Models | Gemma 4 E4B Q4_K_M (dev, both roles, --ctx-size 4096). Customer: same FAST + bigger CODE model (8B/13B/70B). |
@@ -1024,13 +1024,53 @@ Tracks 3-6 (templates, tool hardening, benchmarks, tests) now operational with d
 
 ## Pending Work
 
-1. **Merge v3.1-hardening to master** — All v3.1 + v3.2.1 work is on v3.1-hardening branch
-2. **Build distroless inference container** — llama.cpp in `docker-compose.distroless.yml`, test on Linux with GPU
-3. **Build web-admin** — `cd web-admin && npm install && npm run build`
-4. **A100 benchmark** — Rerun with parallel workers on fast hardware
-5. **Healthcare template pack** — 30 industry-specific templates (10 done via AutoResearch)
-6. **Blue/green deployment** — Zero-downtime updates with auto-rollback
-7. **Community template sync** — Network effect moat across customers
-8. **Public self-serve demo** — Standalone browser demo for CISO outreach
-9. **Design partner outreach** — Target healthcare MSSPs first
-10. **Switch to zovark_app DB user** — Enable RLS enforcement in production
+1. **Dedup batch severity promotion fix** — Go Lua severity comparison bug (13/14 → 14/14)
+2. **Serve web-admin via nginx** — Built to dist/, needs nginx container in docker-compose.yml
+3. **PgBouncer zovark_app switch** — Migration 065 applied, PgBouncer config + worker credential switch pending
+4. **Healthcare template pack** — 30 industry-specific templates (HIPAA, infrastructure, compliance)
+5. **A100 benchmark** — Rerun with parallel workers on GPU hardware
+6. **Customer tier dual-inference test** — Separate FAST/CODE containers on real GPU
+7. **Blue/green deployment** — Zero-downtime updates with auto-rollback (config drafted, needs staging)
+8. **Healer memory leak root cause** — Mitigated by 512MB limit, not fixed
+9. **Merge v3.3-dev to master** — When quick wins (1-3) are done
+10. **Add Path C alerts to regression suite** — Prevent silent Path C breakage from recurring
+
+---
+
+## What Was Built — v3.3-dev Sessions (April 4-5, 2026)
+
+### Model Swap
+1. **Gemma 4 E4B model swap** — Replaced Nemotron-Mini-4B (2.6GB) with Gemma 4 E4B Q4_K_M (5.0GB)
+2. **--ctx-size 4096** — Reduced KV cache from ~1.8GB to ~60MB (Zovark prompts are 200-800 tokens)
+3. **WSL2 memory fix** — Docker Desktop set to 12GB (was 5.8GB default)
+4. **Output sanitizer** — Strips Gemma 4 control tokens. No activations seen — model output is clean.
+5. **Benchmark comparison** — Report in BENCHMARK_COMPARISON_v3.2.1.md.
+
+### Pipeline Hardening
+6. **Path C fix** — str.format() was interpreting JSON {} as format placeholders. ALL unknown alert types were silently failing. Fixed by escaping to {{ }}.
+7. **Path C tool selection validator** — Deduplicates, validates against catalog, caps at 10 tools.
+8. **MITRE ATT&CK propagation** — 12 entries added to mitre_mapping.py. Coverage: 0% → 100%.
+9. **Parallel tool execution** — DAG builder + ThreadPoolExecutor. Flag-gated (default: off).
+
+### Infrastructure
+10. **Healer memory limit** — 512MB container limit prevents leak from starving the VM.
+11. **Inference healthcheck** — Missing binary replaced with curl.
+12. **Stale model defaults fixed** — llama3.2:3b/llama3.1:8b → gemma-4-e4b-it.
+13. **Healer Ollama remnant fixed** — host.docker.internal:11434 → zovark-inference:8080.
+14. **Web-admin built** — npm install + npm run build → web-admin/dist/ (252KB).
+15. **RLS migration 065** — zovark_app user, FORCE ROW LEVEL SECURITY on 10 tables.
+16. **Squid proxy memory** — 128MB → 256MB.
+
+### Engineering Process
+17. **Engineering discipline framework** — 7 slash commands.
+18. **Component registry** — COMPONENT_REGISTRY.md.
+19. **Improvement Cycle #1** — Full observe→analyze→plan→execute→verify→document cycle.
+20. **Overnight autonomous batch** — Stress tested pipeline, dedup, inference, memory. Found and fixed Path C.
+21. **Project tracker v2** — System prompt with mandatory component registry pre-check.
+22. **Merged v3.1-hardening → master** — Tagged v3.2.1.
+
+### Key New Environment Variables
+| Variable | Default | Purpose |
+|----------|---------|---------|
+| ZOVARK_PARALLEL_TOOLS_ENABLED | false | Enable parallel tool execution |
+| ZOVARK_MAX_PARALLEL_TOOLS | 4 | Concurrency limit for parallel tools |
