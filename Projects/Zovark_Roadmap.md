@@ -22,6 +22,8 @@ kanban-plugin: basic
 
 ## Backlog
 
+- [ ] Clean stale Ollama refs (airgap, test, dpo)
+- [ ] Fix 35 test failures (3 bundle import, 4 egress, rest pre-existing)
 - [ ] Asset TTL cleanup
 - [ ] Attack path analyst feedback
 - [ ] Ticket integration (Jira/ServiceNow)

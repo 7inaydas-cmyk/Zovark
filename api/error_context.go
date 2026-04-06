@@ -86,11 +86,11 @@ func HandleModelTimeout(ctx context.Context, tenantID, taskID, priority string, 
 	})
 	_, _ = dbPool.Exec(ctx,
 		`INSERT INTO usage_records (tenant_id, task_id, record_type, model_name, metadata)
-		 VALUES ($1, $2, 'llm_call', 'nemotron-mini-4b', $3)`,
+		 VALUES ($1, $2, 'llm_call', 'gemma-4-e4b-it', $3)`,
 		tenantID, taskID, fallbackMeta,
 	)
 
-	return "nemotron-mini-4b"
+	return "gemma-4-e4b-it"
 }
 
 // ============================================================

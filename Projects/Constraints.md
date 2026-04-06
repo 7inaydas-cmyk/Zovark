@@ -32,3 +32,5 @@
 | 2026-04-06 | Confidence threshold 0.75 | Reduce false correlations |
 | 2026-04-06 | DB-direct for forge | HTTP self-calls hit rate limiter |
 | 2026-04-06 | Hot cache + linter | Faster sessions, catch drift |
+| 2026-04-06 | Board split (active/completed/constraints) | Roadmap was unreadable |
+| 2026-04-06 | Healer needs periodic restart | 509MB/512MB after ~3hrs, leak unfixed |
