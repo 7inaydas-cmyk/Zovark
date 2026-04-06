@@ -18,7 +18,8 @@ import {
   ResponsiveContainer,
   Legend,
 } from "recharts";
-import { analyticsSummary } from "../lib/api";
+import { analyticsSummary, pipelineStatus } from "../lib/api";
+import type { PipelineStatus } from "../lib/api";
 
 interface AnalyticsPanelProps {
   token: string;
@@ -64,6 +65,7 @@ export default function AnalyticsPanel({ token }: AnalyticsPanelProps) {
   const [data, setData] = useState<SummaryData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [pipeline, setPipeline] = useState<PipelineStatus | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -81,6 +83,16 @@ export default function AnalyticsPanel({ token }: AnalyticsPanelProps) {
   useEffect(() => {
     fetchData();
   }, [fetchData]);
+
+  // Pipeline status polling (10s)
+  useEffect(() => {
+    const fetchPipeline = () => {
+      pipelineStatus(token).then(setPipeline).catch(() => {});
+    };
+    fetchPipeline();
+    const id = setInterval(fetchPipeline, 10000);
+    return () => clearInterval(id);
+  }, [token]);
 
   const verdictPieData = data?.verdicts
     ? Object.entries(data.verdicts).map(([name, value]) => ({
@@ -158,6 +170,38 @@ export default function AnalyticsPanel({ token }: AnalyticsPanelProps) {
         <div className="p-3 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 text-sm flex items-center gap-2">
           <AlertTriangle className="w-4 h-4 flex-shrink-0" />
           {error}
+        </div>
+      )}
+
+      {/* Pipeline status indicator */}
+      {pipeline && (
+        <div className="card flex items-center gap-4 py-2 px-4 text-xs">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`w-2 h-2 rounded-full ${
+                pipeline.active > 0
+                  ? "bg-emerald-500 animate-pulse"
+                  : "bg-zinc-600"
+              }`}
+            />
+            <span className="text-zinc-400">Pipeline</span>
+          </div>
+          <span className="text-zinc-300">
+            Active: <strong>{pipeline.active}</strong>
+          </span>
+          <span className="text-zinc-300">
+            Completed: <strong>{pipeline.completed}</strong>
+            <span className="text-zinc-600"> (5m)</span>
+          </span>
+          {pipeline.errors > 0 && (
+            <span className="text-red-400">
+              Errors: <strong>{pipeline.errors}</strong>
+            </span>
+          )}
+          <span className="text-zinc-300">
+            Throughput:{" "}
+            <strong>{pipeline.throughput_per_min.toFixed(1)}/min</strong>
+          </span>
         </div>
       )}
 

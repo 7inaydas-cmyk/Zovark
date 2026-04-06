@@ -393,6 +393,9 @@ func main() {
 		adminGroup.POST("/dedup-health", handleAdminDedupHealth)
 		adminGroup.GET("/system-stats", handleAdminSystemStats)
 
+		// Pipeline status — live monitoring
+		adminGroup.GET("/pipeline/status", handlePipelineStatus)
+
 		// Alert Forge — synthetic workload generator & benchmark
 		adminGroup.POST("/forge/start", handleForgeStart)
 		adminGroup.GET("/forge/history", handleForgeHistory)

@@ -414,6 +414,172 @@ func handleAdminSystemStats(c *gin.Context) {
 	c.JSON(http.StatusOK, result)
 }
 
+// ---------- GET /api/v1/admin/pipeline/status ----------
+
+type recentInvestigation struct {
+	TaskType  string  `json:"task_type"`
+	Verdict   string  `json:"verdict"`
+	RiskScore int     `json:"risk_score"`
+	LatencyS  float64 `json:"latency_s"`
+	Completed string  `json:"completed_at"`
+}
+
+func handlePipelineStatus(c *gin.Context) {
+	tenantID := c.MustGet("tenant_id").(string)
+	ctx, cancel := context.WithTimeout(c.Request.Context(), 10*time.Second)
+	defer cancel()
+
+	minutesStr := c.DefaultQuery("minutes", "5")
+	minutes, err := strconv.Atoi(minutesStr)
+	if err != nil || minutes <= 0 || minutes > 1440 {
+		minutes = 5
+	}
+	interval := strconv.Itoa(minutes)
+
+	// Active (pending + processing)
+	var active int
+	_ = dbPool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM agent_tasks
+		WHERE tenant_id = $1 AND status IN ('pending', 'processing', 'running')
+	`, tenantID).Scan(&active)
+
+	// Completed + errors in window
+	var completed, errors int
+	sRows, sErr := dbPool.Query(ctx, `
+		SELECT status, COUNT(*) FROM agent_tasks
+		WHERE tenant_id = $1 AND completed_at > NOW() - ($2 || ' minutes')::interval
+		  AND status IN ('completed', 'error', 'failed')
+		GROUP BY status
+	`, tenantID, interval)
+	if sErr == nil {
+		defer sRows.Close()
+		for sRows.Next() {
+			var st string
+			var cnt int
+			if err := sRows.Scan(&st, &cnt); err == nil {
+				if st == "completed" {
+					completed = cnt
+				} else {
+					errors += cnt
+				}
+			}
+		}
+	}
+
+	// Total 24h
+	var total24h int
+	_ = dbPool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM agent_tasks
+		WHERE tenant_id = $1 AND created_at > NOW() - INTERVAL '24 hours'
+	`, tenantID).Scan(&total24h)
+
+	// Throughput (last 60s extrapolated to per-minute)
+	var throughputRaw int
+	_ = dbPool.QueryRow(ctx, `
+		SELECT COUNT(*) FROM agent_tasks
+		WHERE tenant_id = $1 AND status = 'completed' AND completed_at > NOW() - INTERVAL '60 seconds'
+	`, tenantID).Scan(&throughputRaw)
+	throughputPerMin := float64(throughputRaw)
+
+	// Latency stats
+	var avgLatencyMs, p95LatencyMs float64
+	_ = dbPool.QueryRow(ctx, `
+		SELECT
+			COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000)), 0),
+			COALESCE(ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000)), 0)
+		FROM agent_tasks
+		WHERE tenant_id = $1 AND status = 'completed' AND completed_at > NOW() - ($2 || ' minutes')::interval
+	`, tenantID, interval).Scan(&avgLatencyMs, &p95LatencyMs)
+
+	// Verdict distribution
+	verdicts := make(map[string]int)
+	vRows, vErr := dbPool.Query(ctx, `
+		SELECT COALESCE(output->>'verdict', 'unknown'), COUNT(*)
+		FROM agent_tasks
+		WHERE tenant_id = $1 AND status = 'completed' AND completed_at > NOW() - ($2 || ' minutes')::interval
+		  AND output->>'verdict' IS NOT NULL
+		GROUP BY output->>'verdict'
+	`, tenantID, interval)
+	if vErr == nil {
+		defer vRows.Close()
+		for vRows.Next() {
+			var v string
+			var cnt int
+			if err := vRows.Scan(&v, &cnt); err == nil {
+				verdicts[v] = cnt
+			}
+		}
+	}
+
+	// Risk distribution (attacks only)
+	var rCritical, rHigh, rMedium, rLow int
+	_ = dbPool.QueryRow(ctx, `
+		SELECT
+			COUNT(*) FILTER (WHERE (output->>'risk_score')::int >= 85),
+			COUNT(*) FILTER (WHERE (output->>'risk_score')::int >= 65 AND (output->>'risk_score')::int < 85),
+			COUNT(*) FILTER (WHERE (output->>'risk_score')::int >= 40 AND (output->>'risk_score')::int < 65),
+			COUNT(*) FILTER (WHERE (output->>'risk_score')::int < 40)
+		FROM agent_tasks
+		WHERE tenant_id = $1 AND status = 'completed'
+		  AND output->>'verdict' != 'benign' AND output->>'risk_score' IS NOT NULL
+		  AND completed_at > NOW() - ($2 || ' minutes')::interval
+	`, tenantID, interval).Scan(&rCritical, &rHigh, &rMedium, &rLow)
+	riskDist := map[string]int{"critical": rCritical, "high": rHigh, "medium": rMedium, "low": rLow}
+
+	// Dedup stats from Redis
+	dedupStats := map[string]interface{}{"total_deduped": 0, "dedup_rate": 0.0}
+	if redisClient != nil {
+		deduped, _ := redisClient.Get(ctx, "dedup:stats:deduplicated").Int()
+		totalDedup, _ := redisClient.Get(ctx, "dedup:stats:new_alert").Int()
+		dedupStats["total_deduped"] = deduped
+		if totalDedup+deduped > 0 {
+			dedupStats["dedup_rate"] = float64(deduped) / float64(totalDedup+deduped)
+		}
+	}
+
+	// Recent investigations
+	var recent []recentInvestigation
+	rRows, rErr := dbPool.Query(ctx, `
+		SELECT task_type,
+			COALESCE(output->>'verdict', 'pending'),
+			COALESCE((output->>'risk_score')::int, 0),
+			ROUND(EXTRACT(EPOCH FROM (completed_at - created_at))::numeric, 1),
+			completed_at
+		FROM agent_tasks
+		WHERE tenant_id = $1 AND status = 'completed' AND completed_at IS NOT NULL
+		ORDER BY completed_at DESC LIMIT 10
+	`, tenantID)
+	if rErr == nil {
+		defer rRows.Close()
+		for rRows.Next() {
+			var ri recentInvestigation
+			var completedAt time.Time
+			if err := rRows.Scan(&ri.TaskType, &ri.Verdict, &ri.RiskScore, &ri.LatencyS, &completedAt); err == nil {
+				ri.Completed = completedAt.Format(time.RFC3339)
+				recent = append(recent, ri)
+			}
+		}
+	}
+	if recent == nil {
+		recent = []recentInvestigation{}
+	}
+
+	c.JSON(http.StatusOK, gin.H{
+		"active":              active,
+		"completed":           completed,
+		"errors":              errors,
+		"total_24h":           total24h,
+		"throughput_per_min":  throughputPerMin,
+		"avg_latency_ms":     avgLatencyMs,
+		"p95_latency_ms":     p95LatencyMs,
+		"verdict_distribution": verdicts,
+		"risk_distribution":  riskDist,
+		"dedup_stats":        dedupStats,
+		"recent":             recent,
+		"timestamp":          time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
 // ---------- POST /api/v1/analytics/summary ----------
 
 type analyticsSummaryRequest struct {

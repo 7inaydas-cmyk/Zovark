@@ -3,7 +3,6 @@ import {
   Zap,
   Square,
   AlertTriangle,
-  Activity,
   ChevronDown,
   ChevronUp,
 } from "lucide-react";
@@ -24,6 +23,7 @@ import {
   forgeHistory,
 } from "../lib/api";
 import type { ForgeConfig, ForgeJob } from "../lib/api";
+import PipelineMonitor from "./PipelineMonitor";
 
 interface AlertForgeProps {
   token: string;
@@ -372,134 +372,71 @@ export default function AlertForge({ token }: AlertForgeProps) {
           </div>
         </div>
 
-        {/* RIGHT: Progress + results */}
+        {/* RIGHT: Live pipeline monitor (always visible) */}
         <div className="space-y-4">
-          {currentJob ? (
-            <>
-              {/* Job header */}
-              <div className="card space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-zinc-500">Job</span>
-                    <code className="text-xs text-zinc-300 font-mono">
-                      {currentJob.id.slice(0, 8)}
-                    </code>
-                  </div>
-                  <span
-                    className={`badge-${
-                      currentJob.status === "completed"
-                        ? "green"
-                        : currentJob.status === "running"
-                          ? "yellow"
-                          : currentJob.status === "error"
-                            ? "red"
-                            : "zinc"
-                    }`}
-                  >
-                    {currentJob.status.toUpperCase()}
+          {/* Forge job status strip (when running or just completed) */}
+          {currentJob && (
+            <div className="card space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-500">Forge Job</span>
+                  <code className="text-xs text-zinc-300 font-mono">
+                    {currentJob.id.slice(0, 8)}
+                  </code>
+                </div>
+                <span
+                  className={`badge-${
+                    currentJob.status === "completed"
+                      ? "green"
+                      : currentJob.status === "running"
+                        ? "yellow"
+                        : currentJob.status === "error"
+                          ? "red"
+                          : "zinc"
+                  }`}
+                >
+                  {currentJob.status.toUpperCase()}
+                </span>
+              </div>
+              <div>
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs text-zinc-500">Progress</span>
+                  <span className="text-xs font-bold text-zinc-200">
+                    {Math.round(currentJob.progress)}%
                   </span>
                 </div>
-
-                {/* Progress bar */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-zinc-500">Progress</span>
-                    <span className="text-xs font-bold text-zinc-200">
-                      {Math.round(currentJob.progress)}%
-                    </span>
-                  </div>
-                  <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-500 rounded-full transition-all duration-300"
-                      style={{ width: `${currentJob.progress}%` }}
-                    />
-                  </div>
+                <div className="w-full h-2 bg-zinc-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 rounded-full transition-all duration-300"
+                    style={{ width: `${currentJob.progress}%` }}
+                  />
                 </div>
-
-                {/* Verdict counters */}
-                {results?.verdicts && (
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-800">
-                    {Object.entries(results.verdicts).map(
-                      ([verdict, count]) => (
-                        <div key={verdict} className="text-center">
-                          <p
-                            className="text-sm font-bold"
-                            style={{
-                              color: VERDICT_COLORS[verdict] || "#a1a1aa",
-                            }}
-                          >
-                            {count}
-                          </p>
-                          <p className="text-[10px] text-zinc-500 truncate">
-                            {verdict.replace(/_/g, " ")}
-                          </p>
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
               </div>
-
-              {/* Stats */}
               {results && (
-                <div className="card">
-                  <div className="grid grid-cols-2 gap-3 text-xs">
-                    <StatItem
-                      label="Submitted"
-                      value={String(results.total_submitted)}
-                    />
-                    <StatItem
-                      label="Completed"
-                      value={String(results.total_completed)}
-                    />
-                    <StatItem
-                      label="Avg Latency"
-                      value={`${results.avg_latency_ms}ms`}
-                    />
-                    <StatItem
-                      label="P95 Latency"
-                      value={`${results.p95_latency_ms}ms`}
-                    />
-                    <StatItem
-                      label="Separation Gap"
-                      value={results.separation_gap.toFixed(1)}
-                      highlight={results.separation_gap >= 40}
-                    />
-                    <StatItem
-                      label="Dedup Count"
-                      value={String(results.dedup_count)}
-                    />
-                    <StatItem
-                      label="Novel Variants"
-                      value={String(results.novel_variants)}
-                    />
-                    <StatItem
-                      label="Errors"
-                      value={String(results.error_count)}
-                      danger={results.error_count > 0}
-                    />
-                    {results.duration && (
-                      <StatItem
-                        label="Duration"
-                        value={results.duration}
-                        colSpan2
-                      />
-                    )}
+                <div className="grid grid-cols-4 gap-2 pt-2 border-t border-zinc-800 text-center text-xs">
+                  <div>
+                    <span className="text-zinc-500 block">Done</span>
+                    <span className="font-bold text-zinc-200">{results.total_completed}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Avg</span>
+                    <span className="font-bold text-zinc-200">{results.avg_latency_ms}ms</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Gap</span>
+                    <span className="font-bold text-emerald-400">{results.separation_gap?.toFixed(1) ?? "-"}</span>
+                  </div>
+                  <div>
+                    <span className="text-zinc-500 block">Errors</span>
+                    <span className={`font-bold ${results.error_count > 0 ? "text-red-400" : "text-zinc-200"}`}>{results.error_count}</span>
                   </div>
                 </div>
               )}
-            </>
-          ) : (
-            <div className="card flex flex-col items-center justify-center py-12 text-center">
-              <Activity className="w-8 h-8 text-zinc-700 mb-3" />
-              <p className="text-sm text-zinc-500">
-                Configure and start a forge run to see results here
-              </p>
-              <p className="text-xs text-zinc-600 mt-1">
-                Alerts will be injected through the full investigation pipeline
-              </p>
             </div>
           )}
+
+          {/* Always-on pipeline monitor */}
+          <PipelineMonitor token={token} isForgeRunning={running} />
         </div>
       </div>
 
@@ -596,33 +533,3 @@ export default function AlertForge({ token }: AlertForgeProps) {
   );
 }
 
-function StatItem({
-  label,
-  value,
-  highlight,
-  danger,
-  colSpan2,
-}: {
-  label: string;
-  value: string;
-  highlight?: boolean;
-  danger?: boolean;
-  colSpan2?: boolean;
-}) {
-  return (
-    <div className={colSpan2 ? "col-span-2" : ""}>
-      <span className="text-zinc-500 block">{label}</span>
-      <span
-        className={`font-bold ${
-          danger
-            ? "text-red-400"
-            : highlight
-              ? "text-emerald-400"
-              : "text-zinc-200"
-        }`}
-      >
-        {value}
-      </span>
-    </div>
-  );
-}

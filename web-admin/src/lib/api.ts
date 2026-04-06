@@ -401,6 +401,39 @@ export async function analyticsSummary(
   });
 }
 
+// --- Pipeline Status ---
+
+export interface PipelineStatus {
+  active: number;
+  completed: number;
+  errors: number;
+  total_24h: number;
+  throughput_per_min: number;
+  avg_latency_ms: number;
+  p95_latency_ms: number;
+  verdict_distribution: Record<string, number>;
+  risk_distribution: Record<string, number>;
+  dedup_stats: { total_deduped: number; dedup_rate: number };
+  recent: Array<{
+    task_type: string;
+    verdict: string;
+    risk_score: number;
+    latency_s: number;
+    completed_at: string;
+  }>;
+  timestamp: string;
+}
+
+export async function pipelineStatus(
+  token: string,
+  minutes = 5
+): Promise<PipelineStatus> {
+  return request<PipelineStatus>(
+    `/api/v1/admin/pipeline/status?minutes=${minutes}`,
+    { headers: authHeaders(token) }
+  );
+}
+
 // --- Investigation Detail ---
 
 export async function getTaskDetail(token: string, id: string) {
