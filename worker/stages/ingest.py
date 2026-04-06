@@ -87,7 +87,7 @@ RAW_LOG_ATTACK_PATTERNS = [
     r'(?i)invoke-(mimikatz|expression|webrequest)',
     r'(?i)net\s+(user|localgroup)\s+.*(/add|/delete)',
     r'(?i)schtasks.*/create.*(/sc|/tn|/tr)',
-    r'(?i)reg\s+add.*\\\\run\b',
+    r'(?i)reg\s+add.*\\\\?run\b',
     r'(?i)vssadmin.*delete\s+shadows',
     r'(?i)wmic.*process\s+call\s+create',
     r'(?i)psexec|paexec',
@@ -135,6 +135,26 @@ RAW_LOG_ATTACK_PATTERNS = [
     r'(?i)\.\./\.\.|path.?traversal|/etc/passwd',
     r'(?i)webshell|\.php.*upload|c99|r57',
     r'(?i)office.*macro|vba.*shell|wmi.*subscription',
+    # --- Red team v3: bypasses found in autoresearch session ---
+    # Registry persistence (single backslash — real Windows log format)
+    r'(?i)reg\s+add.*\\run\b',
+    # CMD caret obfuscation (c^e^r^t^u^t^i^l, p^o^w^e^r^s^h^e^l^l)
+    r'(?i)[a-z]\^[a-z]\^[a-z].*\.(exe|bat|cmd)',
+    r'(?i)c\^[a-z].*-urlcache',
+    # WMI event subscription persistence (T1546.003)
+    r'(?i)CommandLineEventConsumer',
+    r'(?i)__EventFilter.*(?:CommandLine|ActiveScript)',
+    # DNS tunneling with base64 payloads in TXT records
+    r'(?i)DNS\s+TXT.*[A-Za-z0-9+/=]{20,}',
+    r'(?i)\.data\.[a-z]+\.[a-z]{2,6}\b',
+    # Data staging to temp directories (bulk file operations)
+    r'(?i)(?:bulk|mass)\s+(?:copy|transfer|download|export)',
+    r'(?i)(?:staging|copied)[^\n]{0,100}(?:\.docx|\.xlsx|\.pdf|\.pptx)',
+    r'(?i)(?:copy|move)[^\n]{0,100}temp[^\n]{0,100}\d+\s*[MGT]B',
+    # Renamed/masquerading binaries with C2 behavior
+    r'(?i)(?:svchost\d|csrss\d|lsass\d|explorer\d)\w*\.exe',
+    # Hidden window + outbound connection (process hollowing indicator)
+    r'(?i)Window=hidden.*(?:Connecting|TCP|UDP)',
 ]
 
 
@@ -142,9 +162,16 @@ def _has_raw_log_attack_content(raw_log: str) -> bool:
     """Check if raw_log contains high-confidence attack indicators."""
     if not raw_log or len(raw_log) < 10:
         return False
+    # Check original raw_log
     for pattern in RAW_LOG_ATTACK_PATTERNS:
         if re.search(pattern, raw_log):
             return True
+    # Also check caret-deobfuscated version (cmd.exe ^escape bypass)
+    if '^' in raw_log:
+        deobfuscated = raw_log.replace('^', '')
+        for pattern in RAW_LOG_ATTACK_PATTERNS:
+            if re.search(pattern, deobfuscated):
+                return True
     return False
 
 
