@@ -8,10 +8,13 @@ Quick lookup for all project management files.
 
 | File | Purpose | When to Read |
 |------|---------|-------------|
-| Projects/Zovark_Roadmap.md | Master Kanban board — all work across all sprints | Session start, task selection |
-| Projects/Sprint_C_Pipeline.md | Current sprint detail — C1/C2/C3 tasks and acceptance criteria | When working on Sprint C |
-| Projects/ENGINEERING_PROCESS.md | How we ship — commit format, anti-patterns, quality gates, release process | Every session, before every commit |
-| Projects/SESSION_PROTOCOL.md | Session start/end checklists, report template | Session start and end |
+| Projects/hot.md | Instant context (30 lines) | FIRST every session |
+| Projects/Zovark_Roadmap.md | Active work Kanban (Doing/Up Next/Blocked/Backlog) | Task selection |
+| Projects/Sprint_C_Pipeline.md | Current sprint detail — C1/C2/C3 tasks | When working on Sprint C |
+| Projects/Completed.md | Archive of shipped work by sprint | Reference only |
+| Projects/Constraints.md | Invariants + decision log | Before writing code |
+| Projects/ENGINEERING_PROCESS.md | How we ship — anti-patterns, quality gates | Every session |
+| Projects/SESSION_PROTOCOL.md | Session start/end checklists | Session start and end |
 | Projects/claude_project_mgmt.md | This file — quick reference | When lost |
 
 ---

@@ -19,13 +19,11 @@
 - E3: Fine-tuning pilot — need 200+ DPO pairs (no analysts yet)
 
 ## Critical Context (Don't Forget)
-- Migration 066 creates 11 tables. Already applied.
-- Detection tools activate ONLY after worker restart.
-- Plans are instance-scoped, NOT tenant-scoped.
-- Fail-closed on license check errors.
-- The "Go Lua dedup bug" was a test bug. Lua is correct.
-- Path C timeout on CPU is expected — fail-closed to needs_manual_review.
-- Forge collector must query DB directly (not HTTP self-call — hits rate limiter).
+- Full invariants + decisions: Projects/Constraints.md
+- Migration 066 applied. Detection tools need worker restart.
+- Plans instance-scoped. Fail-closed on license errors.
+- Path C timeout on CPU = expected (fail-closed to needs_manual_review).
+- Forge collector uses DB-direct queries (HTTP self-call hits rate limiter).
 
 ## Anti-Patterns (Top 5 Recent)
 - Don't HTTP self-call from Go API (hits own rate limiter) — fixed in 147157e
