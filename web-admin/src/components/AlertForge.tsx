@@ -106,7 +106,11 @@ export default function AlertForge({ token }: AlertForgeProps) {
     setCurrentJob(null);
 
     try {
-      const resp = await forgeStart(token, config);
+      const resp = await forgeStart(token, {
+        ...config,
+        attack_ratio: config.attack_ratio / 100,
+        novelty_rate: config.novelty_rate / 100,
+      });
       const jobId = resp.job_id;
 
       // Start SSE connection for real-time updates

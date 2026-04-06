@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, Component, type ReactNode, type ErrorInfo } from "react";
 import {
   Activity,
   Plug,
@@ -33,6 +33,32 @@ import type {
 import ZvadminPanel from "./ZvadminPanel";
 import AlertForge from "./AlertForge";
 import AnalyticsPanel from "./AnalyticsPanel";
+
+// Error boundary to catch and display React crashes instead of blank screen
+class TabErrorBoundary extends Component<
+  { children: ReactNode; tabName: string },
+  { error: Error | null }
+> {
+  state: { error: Error | null } = { error: null };
+  static getDerivedStateFromError(error: Error) { return { error }; }
+  componentDidCatch(error: Error, info: ErrorInfo) {
+    console.error(`[${this.props.tabName}] React crash:`, error, info);
+  }
+  render() {
+    if (this.state.error) {
+      return (
+        <div className="p-6 rounded-md bg-red-500/10 border border-red-500/20 text-red-400 space-y-2">
+          <div className="text-sm font-semibold">Tab crashed: {this.props.tabName}</div>
+          <pre className="text-xs text-red-300 whitespace-pre-wrap">{this.state.error.message}</pre>
+          <button onClick={() => this.setState({ error: null })} className="btn-secondary text-xs mt-2">
+            Retry
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
 
 interface AdminDashboardProps {
   token: string;
@@ -101,12 +127,14 @@ export default function AdminDashboard({
       {/* Content */}
       <main className="flex-1 px-6 py-6">
         <div className="max-w-7xl mx-auto">
-          {tab === "health" && <HealthTab token={token} />}
-          {tab === "siem" && <SIEMTab token={token} />}
-          {tab === "config" && <ConfigTab token={token} />}
-          {tab === "zvadmin" && <ZvadminPanel token={token} />}
-          {tab === "forge" && <AlertForge token={token} />}
-          {tab === "analytics" && <AnalyticsPanel token={token} />}
+          <TabErrorBoundary key={tab} tabName={tab}>
+            {tab === "health" && <HealthTab token={token} />}
+            {tab === "siem" && <SIEMTab token={token} />}
+            {tab === "config" && <ConfigTab token={token} />}
+            {tab === "zvadmin" && <ZvadminPanel token={token} />}
+            {tab === "forge" && <AlertForge token={token} />}
+            {tab === "analytics" && <AnalyticsPanel token={token} />}
+          </TabErrorBoundary>
         </div>
       </main>
     </div>
