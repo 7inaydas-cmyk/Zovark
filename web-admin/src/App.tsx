@@ -17,11 +17,13 @@ export default function App() {
     setChecking(true);
     try {
       const configs = await getConfig(jwt);
-      const entry = configs.find((c) => c.config_key === "bootstrap.completed");
+      const entry = configs.find(
+        (c) => c.config_key === "bootstrap.completed"
+      );
       setBootstrapComplete(entry?.config_value === "true");
     } catch {
-      // If config endpoint fails (404, 403), assume not bootstrapped
-      setBootstrapComplete(false);
+      // If config fails, skip wizard — system is operational if health passes
+      setBootstrapComplete(true);
     } finally {
       setChecking(false);
     }

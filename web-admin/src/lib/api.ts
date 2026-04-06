@@ -147,7 +147,7 @@ export async function upsertConfig(
   await request<unknown>("/api/v1/admin/config", {
     method: "PUT",
     headers: authHeaders(token),
-    body: JSON.stringify({ key, value, is_secret: isSecret }),
+    body: JSON.stringify({ config_key: key, config_value: value, is_secret: isSecret }),
   });
 }
 
