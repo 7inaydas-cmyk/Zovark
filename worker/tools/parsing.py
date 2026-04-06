@@ -6,16 +6,20 @@ def parse_windows_event(raw_log: str) -> dict:
     """Parse Windows event log key=value pairs into dict."""
     if not raw_log:
         return {}
+    # Limit parsing to first 4KB to prevent ReDoS on large payloads.
+    # Key=value pairs appear in structured fields, not in long raw payloads.
+    parse_input = raw_log[:4096] if len(raw_log) > 4096 else raw_log
     result = {}
     # Match Key=Value patterns (value may be quoted or unquoted)
     pattern = r'(\w+)\s*=\s*(?:"([^"]*?)"|(\S+))'
-    for match in re.finditer(pattern, raw_log):
+    for match in re.finditer(pattern, parse_input):
         key = match.group(1)
         value = match.group(2) if match.group(2) is not None else match.group(3)
         result[key] = value
     # Also match "Key: Value" patterns (Windows event viewer format)
-    pattern2 = r'(\w[\w\s]*\w)\s*:\s+(\S+)'
-    for match in re.finditer(pattern2, raw_log):
+    # Key limited to 50 chars to prevent ReDoS on long word strings
+    pattern2 = r'(\w[\w ]{0,48}\w)\s*:\s+(\S+)'
+    for match in re.finditer(pattern2, parse_input):
         key = match.group(1).strip().replace(" ", "")
         value = match.group(2)
         if key not in result:

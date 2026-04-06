@@ -120,7 +120,7 @@ func suggestRemediationHandler(c *gin.Context) {
 		WHERE t.id = $1 AND t.tenant_id = $2
 	`, req.InvestigationID, tenantID).Scan(&taskType, &verdict, &riskScore, &taskOutputRaw)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "investigation not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
 
@@ -280,7 +280,7 @@ func verifyRemediationHandler(c *gin.Context) {
 		&originalRisk, &verificationAttempts, &rawLog, &sourceIP,
 	)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "remediation action not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
 
@@ -352,6 +352,12 @@ func verifyRemediationHandler(c *gin.Context) {
 	}
 
 	// Update remediation action with verification attempt
+	verifyResult, _ := json.Marshal(map[string]interface{}{
+		"synthetic_task_id": syntheticTaskID,
+		"original_risk":    originalRisk,
+		"original_verdict": originalVerdict,
+		"initiated_by":     userID,
+	})
 	_, err = dbPool.Exec(ctx, `
 		UPDATE remediation_actions
 		SET verification_attempts = verification_attempts + 1,
@@ -360,22 +366,23 @@ func verifyRemediationHandler(c *gin.Context) {
 		    verification_result = $1,
 		    status = 'in_progress'
 		WHERE id = $2 AND tenant_id = $3
-	`, fmt.Sprintf(`{"synthetic_task_id":"%s","original_risk":%d,"original_verdict":"%s","initiated_by":"%s"}`,
-		syntheticTaskID, originalRisk, originalVerdict, userID),
-		req.RemediationID, tenantID)
+	`, string(verifyResult), req.RemediationID, tenantID)
 	if err != nil {
 		respondInternalError(c, err, "update remediation verification")
 		return
 	}
 
 	// Audit event
+	auditMeta, _ := json.Marshal(map[string]interface{}{
+		"synthetic_task_id": syntheticTaskID,
+		"attack_type":      attackType,
+		"user":             userID,
+	})
 	_, _ = dbPool.Exec(ctx, `
 		INSERT INTO audit_events
 		(tenant_id, event_type, actor_type, resource_type, resource_id, metadata, trace_id)
 		VALUES ($1, 'remediation_verification_started', 'user', 'remediation_actions', $2, $3, $4)
-	`, tenantID, req.RemediationID,
-		fmt.Sprintf(`{"synthetic_task_id":"%s","attack_type":"%s","user":"%s"}`, syntheticTaskID, attackType, userID),
-		syntheticTraceID)
+	`, tenantID, req.RemediationID, string(auditMeta), syntheticTraceID)
 
 	c.JSON(http.StatusAccepted, gin.H{
 		"remediation_id":   req.RemediationID,
@@ -508,7 +515,7 @@ func updateRemediationActionHandler(c *gin.Context) {
 		WHERE id = $1 AND tenant_id = $2
 	`, actionID, tenantID).Scan(&currentStatus)
 	if err != nil {
-		c.JSON(http.StatusNotFound, gin.H{"error": "remediation action not found"})
+		c.JSON(http.StatusNotFound, gin.H{"error": "not found"})
 		return
 	}
 

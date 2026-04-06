@@ -47,13 +47,12 @@ def detect_kerberoasting(siem_event: dict) -> dict:
     service_name = parsed.get("ServiceName", "")
 
     # Raw log keyword fallback — catches narrative SIEM alerts
+    # Single-term patterns (no backtracking risk)
     kerberoast_keywords = [
         (r'\bkerberoast\w*\b', "Kerberoasting keyword detected", 40),
         (r'\bservice\s*ticket\s*crack\w*\b', "Service ticket cracking detected", 35),
-        (r'\bspn\w*\b.*\brc4\b', "SPN with RC4 encryption — Kerberoasting indicator", 45),
         (r'\btgs\s+request\w*\b', "TGS ticket request detected", 25),
         (r'\brc4.hmac\b', "RC4-HMAC encryption — weak Kerberos cipher", 30),
-        (r'\brubeus\b.*\bkerberoast\b', "Rubeus Kerberoasting detected", 50),
         (r'\binvoke-kerberoast\b', "Invoke-Kerberoast PowerShell detected", 50),
         (r'\bgetuserspns\b', "GetUserSPNs — Kerberoasting tool", 45),
         (r'\bspn\s*(?:enum|scan)\w*\b', "SPN enumeration detected — Kerberoasting recon", 30),
@@ -63,6 +62,14 @@ def detect_kerberoasting(siem_event: dict) -> dict:
         if re.search(pattern, raw_lower):
             findings.append(description)
             risk += score
+
+    # Compound patterns — split into independent searches to avoid ReDoS
+    if re.search(r'\bspn\w*\b', raw_lower) and re.search(r'\brc4\b', raw_lower):
+        findings.append("SPN with RC4 encryption — Kerberoasting indicator")
+        risk += 45
+    if re.search(r'\brubeus\b', raw_lower) and re.search(r'\bkerberoast\b', raw_lower):
+        findings.append("Rubeus Kerberoasting detected")
+        risk += 50
 
     # RC4 encryption (0x17) — primary indicator
     if encryption == "0x17":
@@ -147,17 +154,25 @@ def detect_golden_ticket(siem_event: dict) -> dict:
         (r'\brubeus\b', "Rubeus tool detected — Kerberos abuse toolkit", 45),
         (r'\boverpass.the.hash\b', "Overpass-the-hash technique detected", 40),
         (r'\bpass.the.ticket\b', "Pass-the-ticket technique detected", 40),
-        (r'\bkrbtgt.*hash\b', "krbtgt hash reference — Golden Ticket prerequisite", 50),
-        (r'\bticket.*forg\w+\b', "Ticket forgery language detected", 45),
         (r'\bntds\.dit\b', "NTDS.dit access — domain credential extraction", 40),
         (r'\babnormal\w*\s+(?:ticket\s+)?lifetime\b', "Abnormal ticket lifetime detected", 40),
-        (r'\btgt\b.*\babnormal\b', "TGT with abnormal characteristics detected", 45),
-        (r'\bforged\b|\bfake\b.*\btgt\b', "Forged/fake TGT reference detected", 50),
+        (r'\bforged\b', "Forged/fake TGT reference detected", 50),
     ]
     for pattern, description, score in golden_ticket_keywords:
         if re.search(pattern, raw_lower):
             findings.append(description)
             risk += score
+
+    # Compound patterns — split to avoid ReDoS
+    if re.search(r'\bkrbtgt\b', raw_lower) and re.search(r'\bhash\b', raw_lower):
+        findings.append("krbtgt hash reference — Golden Ticket prerequisite")
+        risk += 50
+    if re.search(r'\bticket\b', raw_lower) and re.search(r'\bforg\w+\b', raw_lower):
+        findings.append("Ticket forgery language detected")
+        risk += 45
+    if re.search(r'\btgt\b', raw_lower) and re.search(r'\babnormal\b', raw_lower):
+        findings.append("TGT with abnormal characteristics detected")
+        risk += 45
 
     # TGT request with RC4
     if event_id == "4768" and encryption == "0x17":
@@ -429,12 +444,12 @@ def detect_c2(siem_event: dict) -> dict:
             break
     
     # Known bad user agents
-    if re.search(r'user-agent.*cobalt|user-agent.*meterpreter|user-agent.*implant', raw_lower):
+    if re.search(r'user-agent', raw_lower) and re.search(r'cobalt|meterpreter|implant', raw_lower):
         findings.append("Malicious User-Agent detected")
         risk += 25
     
     # DNS tunneling patterns
-    if re.search(r'dns.*tunnel|type=txt|\.[^.]{20,}\.', raw_lower):
+    if (re.search(r'\bdns\b', raw_lower) and re.search(r'\btunnel\b', raw_lower)) or re.search(r'type=txt|\.[^.]{20,}\.', raw_lower):
         findings.append("DNS tunneling pattern detected")
         risk += 20
 
@@ -543,7 +558,7 @@ def detect_data_exfil(siem_event: dict) -> dict:
         risk += 25
     
     # Multiple failed auth then success
-    if re.search(r'failed.*auth|multiple.*fail', raw_lower) and re.search(r'then.*success|success.*upload', raw_lower):
+    if (re.search(r'\bfailed\b', raw_lower) and re.search(r'\bauth\b', raw_lower) or re.search(r'\bmultiple\b', raw_lower) and re.search(r'\bfail\b', raw_lower)) and (re.search(r'\bthen\b', raw_lower) and re.search(r'\bsuccess\b', raw_lower) or re.search(r'\bupload\b', raw_lower)):
         findings.append("Suspicious access pattern detected")
         risk += 25
 
@@ -594,29 +609,29 @@ def detect_lolbin_abuse(siem_event: dict) -> dict:
     # LOLBin patterns with malicious indicators
     lolbin_patterns = {
         "certutil": [
-            (r'certutil.*-urlcache', "certutil download via -urlcache"),
-            (r'certutil.*-split.*-f', "certutil download with -split -f"),
-            (r'certutil.*-decode', "certutil base64 decode"),
-            (r'certutil.*-encode', "certutil base64 encode"),
+            (r'certutil[^\n]{0,500}-urlcache', "certutil download via -urlcache"),
+            (r'certutil[^\n]{0,500}-split[^\n]{0,200}-f', "certutil download with -split -f"),
+            (r'certutil[^\n]{0,500}-decode', "certutil base64 decode"),
+            (r'certutil[^\n]{0,500}-encode', "certutil base64 encode"),
         ],
         "mshta": [
             (r'mshta(?:\.exe)?[\s:]*(?:http|vbscript|javascript)', "mshta executing remote/scripted content"),
         ],
         "bitsadmin": [
-            (r'bitsadmin.*transfer', "bitsadmin file transfer"),
-            (r'bitsadmin.*/download', "bitsadmin download"),
+            (r'bitsadmin[^\n]{0,500}transfer', "bitsadmin file transfer"),
+            (r'bitsadmin[^\n]{0,500}/download', "bitsadmin download"),
         ],
         "rundll32": [
-            (r'rundll32.*javascript', "rundll32 executing JavaScript"),
-            (r'rundll32.*shell32', "rundll32 shell32 abuse"),
+            (r'rundll32[^\n]{0,500}javascript', "rundll32 executing JavaScript"),
+            (r'rundll32[^\n]{0,500}shell32', "rundll32 shell32 abuse"),
         ],
         "regsvr32": [
-            (r'regsvr32.*/s.*/u.*scrobj', "regsvr32 scriptlet execution (Squiblydoo)"),
-            (r'regsvr32.*http', "regsvr32 remote COM object"),
+            (r'regsvr32[^\n]{0,500}/s[^\n]{0,200}/u[^\n]{0,200}scrobj', "regsvr32 scriptlet execution (Squiblydoo)"),
+            (r'regsvr32[^\n]{0,500}http', "regsvr32 remote COM object"),
         ],
         "wscript": [
-            (r'wscript.*\.js\b', "wscript executing JavaScript"),
-            (r'cscript.*\.vbs\b', "cscript executing VBScript"),
+            (r'wscript[^\n]{0,500}\.js\b', "wscript executing JavaScript"),
+            (r'cscript[^\n]{0,500}\.vbs\b', "cscript executing VBScript"),
         ],
     }
 
