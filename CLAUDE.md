@@ -38,6 +38,8 @@
 | `Projects/ENGINEERING_PROCESS.md` | How we ship — commit format, anti-patterns, quality gates |
 | `Projects/SESSION_PROTOCOL.md` | Session start/end checklist + report template |
 | `Projects/claude_project_mgmt.md` | Quick reference for all project files |
+| `Projects/hot.md` | Session context cache — read FIRST every session | 
+| `scripts/lint_architecture.sh` | PRD-vs-code integrity checks (12 automated) |
 
 ## Credentials
 

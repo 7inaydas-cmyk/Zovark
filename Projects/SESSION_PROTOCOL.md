@@ -6,7 +6,7 @@ Checklist for every Claude Code session on Zovark.
 
 ## SESSION START
 
-- [ ] **Read** HANDOVER.md, CLAUDE.md, COMPONENT_REGISTRY.md, Projects/Zovark_Roadmap.md
+- [ ] **Read hot cache first** `Projects/hot.md` (20 lines, instant context). ONLY read CLAUDE.md/HANDOVER.md if hot.md is stale or you need deep detail about a specific component.
 - [ ] **Run** `cmd/zvadmin/zvadmin.exe diagnose` — all checks must pass
 - [ ] **Check** Kanban board "In Progress" column — pick up or pick next unblocked task
 - [ ] **Run** `bash autoresearch/cycle10/verify_all.sh` — must be 16/16 before any code changes
@@ -19,6 +19,8 @@ If any step fails, fix it before proceeding to implementation.
 
 - [ ] **Verify** `bash autoresearch/cycle10/verify_all.sh` — 16/16
 - [ ] **Verify** `docker compose exec -T worker python -m pytest tests/ -q --tb=short` — all pass
+- [ ] **Update hot cache** — rewrite `Projects/hot.md` with current state (last commit, sprint status, blockers, new anti-patterns)
+- [ ] **Run architecture lint** — `bash scripts/lint_architecture.sh` — if any FAIL: fix before committing. Log warnings in Kanban Risks.
 - [ ] **Update** Kanban: move completed tasks to Done, add any new blockers discovered
 - [ ] **Update** COMPONENT_REGISTRY.md (new files), CLAUDE.md (new tables/routes/services), HANDOVER.md (state changes)
 - [ ] **Provide** session report using template below

@@ -95,3 +95,6 @@ kanban-plugin: basic
 - [x] 2026-04-06: Auto-verification = regression check (pipeline still detects), NOT remediation verification.
 - [x] 2026-04-06: Conservative contextual risk multipliers (0.72x-1.87x range) to avoid over-adjustment.
 - [x] 2026-04-06: Attack path MIN_CONFIDENCE = 0.75 to reduce false correlations.
+- [x] 2026-04-06: Added hot cache (Projects/hot.md) — Claude Code reads this first, skips CLAUDE.md unless needed.
+- [x] 2026-04-06: Added architecture linter (12 checks) — runs at session end, catches PRD drift.
+- [x] 2026-04-06: Forge collector uses DB-direct queries, not HTTP self-calls (rate limiter bypass).

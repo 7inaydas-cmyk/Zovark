@@ -124,6 +124,29 @@ Real mistakes from this project. Do not repeat.
 | Model calibration | `cmd/zvadmin/zvadmin.exe model check` | Separation gap > 50 points | After scoring changes |
 | AutoResearch cycle | `bash autoresearch/telemetry_driven/run.sh` | No new regressions | After significant changes |
 | Code cache flush | `scripts/flush_code_cache.sh` | No stale cached responses | After prompt or model changes |
+| Arch lint | `bash scripts/lint_architecture.sh` | 0 failures | Before merge, session end |
+
+---
+
+## Architecture Linting
+
+Run `bash scripts/lint_architecture.sh` at session end and before any merge to master.
+
+12 automated checks verify:
+1. investigation_workflow.py unmodified
+2. Two-model FAST/CODE architecture preserved
+3. No cloud SDK imports in pipeline stages
+4. Tenant isolation in intelligence layer queries
+5. SAST blocklist includes all dangerous modules
+6. Bundle importer doesn't hot-load detection tools
+7. investigation_plans_db is instance-scoped (no tenant_id)
+8. License manager is fail-closed on errors
+9. Migration 066 is additive-only (no DROP/TRUNCATE)
+10. Regression suite includes Path C
+11. No HTTP self-calls in Go API handlers
+12. Copilot has semaphore/priority control
+
+If any check FAILS, fix before merging. Warnings get logged to the Kanban board Risks section for review.
 
 ---
 
