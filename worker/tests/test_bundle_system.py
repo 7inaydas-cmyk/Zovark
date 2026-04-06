@@ -243,8 +243,7 @@ mod = importlib.import_module(name)
         from worker.bundles.security import run_sast
 
         code = """
-import builtins
-fn = getattr(builtins, 'ev' + 'al')
+fn = getattr(__builtins__, 'ev' + 'al')
 fn('1+1')
 """
         result = run_sast(code, skip_runtime=True)

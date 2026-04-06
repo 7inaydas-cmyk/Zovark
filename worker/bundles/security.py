@@ -113,14 +113,15 @@ def _phase1_ast_analysis(code: str) -> list[SASTIssue]:
         # Check imports
         if isinstance(node, ast.Import):
             for alias in node.names:
-                module = alias.name.split(".")[0]
-                if module in FORBIDDEN_IMPORTS:
+                top_module = alias.name.split(".")[0]
+                full_module = alias.name
+                if top_module in FORBIDDEN_IMPORTS or full_module in FORBIDDEN_IMPORTS:
                     issues.append(SASTIssue(
                         phase=1, severity="critical",
                         description=f"Forbidden import: {alias.name}",
                         line=node.lineno,
                     ))
-                elif module not in ALLOWED_IMPORTS:
+                elif top_module not in ALLOWED_IMPORTS and full_module not in ALLOWED_IMPORTS:
                     issues.append(SASTIssue(
                         phase=1, severity="critical",
                         description=f"Import not in allowlist: {alias.name}",
@@ -129,14 +130,15 @@ def _phase1_ast_analysis(code: str) -> list[SASTIssue]:
 
         elif isinstance(node, ast.ImportFrom):
             if node.module:
-                module = node.module.split(".")[0]
-                if module in FORBIDDEN_IMPORTS:
+                top_module = node.module.split(".")[0]
+                full_module = node.module
+                if top_module in FORBIDDEN_IMPORTS or full_module in FORBIDDEN_IMPORTS:
                     issues.append(SASTIssue(
                         phase=1, severity="critical",
                         description=f"Forbidden from-import: {node.module}",
                         line=node.lineno,
                     ))
-                elif module not in ALLOWED_IMPORTS:
+                elif top_module not in ALLOWED_IMPORTS and full_module not in ALLOWED_IMPORTS:
                     issues.append(SASTIssue(
                         phase=1, severity="critical",
                         description=f"From-import not in allowlist: {node.module}",

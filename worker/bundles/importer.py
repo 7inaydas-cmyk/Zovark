@@ -76,6 +76,7 @@ def get_plans_for_generation(generation: Optional[int] = None) -> dict:
 
     DB plans take priority over file plans for same plan_key.
     """
+    global _plans_cache_time
     import time
 
     gen = generation if generation is not None else _plan_generation
@@ -114,7 +115,6 @@ def get_plans_for_generation(generation: Optional[int] = None) -> dict:
         logger.warning("Could not load DB plans: %s", e)
 
     _plans_cache[gen] = plans
-    global _plans_cache_time
     _plans_cache_time = now
 
     # Keep at most 3 generations cached

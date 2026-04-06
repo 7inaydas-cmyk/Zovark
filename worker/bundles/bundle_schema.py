@@ -217,14 +217,15 @@ def check_sequence_and_expiry(
     if manifest.expires_at:
         try:
             expires = datetime.fromisoformat(manifest.expires_at)
+        except (ValueError, TypeError):
+            expires = None  # Malformed expiry treated as non-expiring
+        if expires is not None:
             if expires.tzinfo is None:
                 expires = expires.replace(tzinfo=timezone.utc)
             if expires < datetime.now(timezone.utc):
                 raise ValueError(
                     f"Bundle expired at {manifest.expires_at}"
                 )
-        except (ValueError, TypeError):
-            pass  # Malformed expiry treated as non-expiring
 
     # Revocation check
     if manifest.bundle_id in revoked_ids:
