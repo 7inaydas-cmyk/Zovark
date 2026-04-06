@@ -336,6 +336,12 @@ func main() {
 		api.GET("/governance/config", requireRole("admin"), getGovernanceConfigHandler)
 		api.PUT("/governance/config", requireRole("admin"), updateGovernanceConfigHandler)
 
+		// Remediation engine (Sprint C1)
+		api.POST("/remediation/suggest", requireRole("admin", "analyst"), suggestRemediationHandler)
+		api.POST("/remediation/verify", requireRole("admin"), verifyRemediationHandler)
+		api.GET("/remediation/actions", listRemediationActionsHandler)
+		api.PATCH("/remediation/actions/:id", requireRole("admin", "analyst"), updateRemediationActionHandler)
+
 		// Analytics summary (analysts + admins)
 		api.POST("/analytics/summary", requireRole("admin", "analyst"), handleAnalyticsSummary)
 	}
