@@ -348,6 +348,8 @@ async def store_investigation(data: dict) -> dict:
                         "task_type": task_type,
                     })
                     cur.execute("NOTIFY task_completed, %s", (notify_payload,))
+                    # Trigger attack path correlator (async, separate workflow)
+                    cur.execute("NOTIFY attack_path_correlate, %s", (notify_payload,))
             except Exception as notify_err:
                 print(f"NOTIFY failed (non-fatal): {notify_err}")
 

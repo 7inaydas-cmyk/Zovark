@@ -20,6 +20,7 @@ benchmark_*.json
 litellm_config*.yaml
 siem-lab/logs/
 agent/keys/zovark_signing_key.pem
-bundles/
+# Bundle staging directory (not the worker/bundles Python package)
+/bundles/
 *.zvk
 .code-graph-rag/

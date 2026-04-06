@@ -335,6 +335,9 @@ func main() {
 		// Governance configuration (admin only)
 		api.GET("/governance/config", requireRole("admin"), getGovernanceConfigHandler)
 		api.PUT("/governance/config", requireRole("admin"), updateGovernanceConfigHandler)
+
+		// Analytics summary (analysts + admins)
+		api.POST("/analytics/summary", requireRole("admin", "analyst"), handleAnalyticsSummary)
 	}
 
 	// SIEM ingest routes — high-volume alert ingestion
@@ -376,6 +379,20 @@ func main() {
 
 		// Bootstrap wizard
 		adminGroup.POST("/bootstrap/inject-synthetic", handleInjectSynthetic)
+
+		// Zvadmin diagnostic endpoints (in-process equivalents of zvadmin CLI)
+		adminGroup.POST("/diagnose", handleAdminDiagnose)
+		adminGroup.POST("/alerts", handleAdminAlerts)
+		adminGroup.POST("/model-check", handleAdminModelCheck)
+		adminGroup.POST("/dedup-health", handleAdminDedupHealth)
+		adminGroup.GET("/system-stats", handleAdminSystemStats)
+
+		// Alert Forge — synthetic workload generator & benchmark
+		adminGroup.POST("/forge/start", handleForgeStart)
+		adminGroup.GET("/forge/history", handleForgeHistory)
+		adminGroup.GET("/forge/:jobId", handleForgeStatus)
+		adminGroup.GET("/forge/:jobId/stream", handleForgeStream)
+		adminGroup.POST("/forge/:jobId/stop", handleForgeStop)
 	}
 
 	// Break-glass emergency auth — NO auth middleware (it IS the auth)

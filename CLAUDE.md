@@ -12,7 +12,7 @@
 | Field | Value |
 |-------|-------|
 | Version | v3.2.1 tagged on master, v3.3-dev active |
-| Date | 2026-04-05 |
+| Date | 2026-04-06 |
 | Status | Production-ready — 40 tools, 24 plans, 100% detection, investigation-aware dedup, SIEM push-back, Valkey cache |
 | Stack | Go API + Python Temporal Worker + React Dashboard + PostgreSQL/pgvector + Valkey (BSD) + LLM inference |
 | Models | Gemma 4 E4B Q4_K_M (dev, both roles, --ctx-size 4096). Customer: same FAST + bigger CODE model (8B/13B/70B). |
@@ -21,13 +21,23 @@
 | Tools | 40 investigation tools (7 categories) + 24 saved investigation plans |
 | Templates | 25 active (12 hand-written + 2 flywheel + 10 AutoResearch + 1 quorum-promoted) |
 | Tests | 535 unit + 14 integration + 515-alert corpus |
-| Services | 10 core Docker containers + optional profiles (tracing, monitoring, siem-lab, etc.) + zvadmin host CLI |
+| Services | 11 core Docker containers + optional profiles (tracing, monitoring, siem-lab, etc.) + zvadmin host CLI |
 | Dashboard | React 19 + TypeScript + Vite 7 + Tailwind 4, 17 pages, SOC War Room design |
 | Database | PostgreSQL 16 + pgvector, 86+ tables, 64 migrations, RLS on 10 tables |
 | Concurrency | 16 concurrent activities, 32 concurrent workflows, Semaphore(2) on LLM calls |
 | Feature Flag | `ZOVARK_EXECUTION_MODE=tools` (v3, default) or `sandbox` (v2 legacy) |
 | Observability | OpenTelemetry → Signoz (self-hosted ClickHouse). `docker compose --profile tracing up -d` |
 | Config | Pydantic Settings (`worker/settings.py`), SecretStr credentials, .env support |
+
+## Project Management
+
+| File | Purpose |
+|------|---------|
+| `Projects/Zovark_Roadmap.md` | Master Kanban board — all sprints, decisions, constraints |
+| `Projects/Sprint_C_Pipeline.md` | Current sprint detail — C1/C2/C3 tasks |
+| `Projects/ENGINEERING_PROCESS.md` | How we ship — commit format, anti-patterns, quality gates |
+| `Projects/SESSION_PROTOCOL.md` | Session start/end checklist + report template |
+| `Projects/claude_project_mgmt.md` | Quick reference for all project files |
 
 ## Credentials
 
@@ -361,6 +371,7 @@ Apply migrations: `docker compose exec -T postgres psql -U zovark -d zovark < mi
 | healer | Python (agent/healer.py) | 8081 | zovark-healer | curl 127.0.0.1:8081/api/health |
 | squid-proxy | ubuntu/squid | 3128 | zovark-egress-proxy | -- |
 | docker-socket-proxy | tecnativa/docker-socket-proxy | 2375 | zovark-docker-proxy | -- |
+| web-admin | nginx:1-alpine | 3100 | zovark-web-admin | wget 127.0.0.1:80 |
 
 ### LLM Inference
 
@@ -1024,16 +1035,24 @@ Tracks 3-6 (templates, tool hardening, benchmarks, tests) now operational with d
 
 ## Pending Work
 
-1. **Dedup batch severity promotion fix** — Go Lua severity comparison bug (13/14 → 14/14)
-2. **Serve web-admin via nginx** — Built to dist/, needs nginx container in docker-compose.yml
-3. **PgBouncer zovark_app switch** — Migration 065 applied, PgBouncer config + worker credential switch pending
-4. **Healthcare template pack** — 30 industry-specific templates (HIPAA, infrastructure, compliance)
-5. **A100 benchmark** — Rerun with parallel workers on GPU hardware
-6. **Customer tier dual-inference test** — Separate FAST/CODE containers on real GPU
-7. **Blue/green deployment** — Zero-downtime updates with auto-rollback (config drafted, needs staging)
-8. **Healer memory leak root cause** — Mitigated by 512MB limit, not fixed
-9. **Merge v3.3-dev to master** — When quick wins (1-3) are done
-10. **Add Path C alerts to regression suite** — Prevent silent Path C breakage from recurring
+1. **PgBouncer zovark_app switch** — Migration 065 applied, PgBouncer config + worker credential switch pending
+2. **Healthcare template pack** — 30 industry-specific templates (HIPAA, infrastructure, compliance)
+3. **A100 benchmark** — Rerun with parallel workers on GPU hardware
+4. **Customer tier dual-inference test** — Separate FAST/CODE containers on real GPU
+5. **Blue/green deployment** — Zero-downtime updates with auto-rollback (config drafted, needs staging)
+6. **Healer memory leak root cause** — Mitigated by 512MB limit, not fixed
+7. **Merge v3.3-dev to master** — Quick wins done, ready for merge
+8. **Intelligence Layer PRD** — Multi-model architecture, attack paths, contextual risk, copilot (see docs/PRD_INTELLIGENCE_LAYER_ADDENDUM.md)
+
+---
+
+## What Was Built — v3.3-dev Session (April 6, 2026)
+
+### Quick Wins (4 items from priority queue)
+1. **Path C regression coverage** — Added `unusual_network_traffic` alert (11th attack) to verify_all.sh. Forces LLM tool selection (Path C). Regression is now 16/16 (11 attacks + 5 benign). Zero Path C coverage → full coverage.
+2. **Dedup batch severity promotion fix** — Root cause: test 13 read wrong Redis key (`KEYS apibatch:src:* | head -1` returned stale key from earlier tests). Fixed: flush batch keys before test, compute exact SHA-256 batch key, strip `\r` from Docker output. Lua script was correct. 14/14 expected.
+3. **Web-admin served via nginx** — Added `zovark-web-admin` container (nginx:alpine) on port 3100. Config: `config/nginx-webadmin.conf` with SPA fallback + cache headers. 64MB limit.
+4. **PRD addendum saved** — Intelligence Layer + Multi-Model Architecture PRD (Phases 10-15) saved to `docs/PRD_INTELLIGENCE_LAYER_ADDENDUM.md`.
 
 ---
 

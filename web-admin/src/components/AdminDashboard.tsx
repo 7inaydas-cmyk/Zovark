@@ -15,6 +15,9 @@ import {
   X,
   Clock,
   User,
+  Terminal,
+  Zap,
+  BarChart2,
 } from "lucide-react";
 import {
   getSystemHealth,
@@ -27,13 +30,16 @@ import type {
   ConfigEntry,
   ConfigAuditEntry,
 } from "../lib/api";
+import ZvadminPanel from "./ZvadminPanel";
+import AlertForge from "./AlertForge";
+import AnalyticsPanel from "./AnalyticsPanel";
 
 interface AdminDashboardProps {
   token: string;
   onLogout: () => void;
 }
 
-type Tab = "health" | "siem" | "config";
+type Tab = "health" | "siem" | "config" | "zvadmin" | "forge" | "analytics";
 
 export default function AdminDashboard({
   token,
@@ -45,6 +51,9 @@ export default function AdminDashboard({
     { id: "health", label: "System Health", icon: Activity },
     { id: "siem", label: "SIEM & Ingestion", icon: Plug },
     { id: "config", label: "Configuration", icon: Settings },
+    { id: "zvadmin", label: "Zvadmin", icon: Terminal },
+    { id: "forge", label: "Alert Forge", icon: Zap },
+    { id: "analytics", label: "Analytics", icon: BarChart2 },
   ];
 
   return (
@@ -95,6 +104,9 @@ export default function AdminDashboard({
           {tab === "health" && <HealthTab token={token} />}
           {tab === "siem" && <SIEMTab token={token} />}
           {tab === "config" && <ConfigTab token={token} />}
+          {tab === "zvadmin" && <ZvadminPanel token={token} />}
+          {tab === "forge" && <AlertForge token={token} />}
+          {tab === "analytics" && <AnalyticsPanel token={token} />}
         </div>
       </main>
     </div>

@@ -655,6 +655,28 @@ def _parse_tool_plan(llm_response: str) -> list:
     return validated
 
 
+def _check_tenant_tier(tenant_id: str, required_tier: str) -> bool:
+    """Check if tenant has required tier. Fail-closed: DB error → deny premium."""
+    if required_tier == "community":
+        return True
+    try:
+        conn = _get_db()
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT tier FROM installed_bundles WHERE rolled_back = false "
+                    "ORDER BY sequence_number DESC LIMIT 1"
+                )
+                row = cur.fetchone()
+                if row and row[0] == "premium":
+                    return True
+                return False
+        finally:
+            conn.close()
+    except Exception:
+        return False  # Fail-closed: deny premium on error
+
+
 async def _analyze_v3_tools(ingest: IngestOutput) -> AnalyzeOutput:
     """V3 tool-calling analysis: load saved plan or ask LLM to select tools."""
     t0 = time.time()
@@ -687,7 +709,8 @@ async def _analyze_v3_tools(ingest: IngestOutput) -> AnalyzeOutput:
         except Exception as e:
             activity.logger.warning(f"Failed to load saved plan for {ingest.skill_id}: {e}")
 
-    # Check investigation_plans.json for built-in plans
+    # Load all plans: DB plans (investigation_plans_db) first, then file plans.
+    # DB wins on conflict for same plan_key. Cached with 5-min TTL + generation pinning.
     # Alias map: SIEM task_types → investigation_plans.json keys
     _PLAN_ALIASES = {
         "phishing": "phishing_investigation",
@@ -712,9 +735,17 @@ async def _analyze_v3_tools(ingest: IngestOutput) -> AnalyzeOutput:
         "powershell_obfusc": "powershell_obfuscation",
     }
     try:
-        plans_path = os.path.join(os.path.dirname(__file__), "..", "tools", "investigation_plans.json")
-        with open(plans_path) as f:
-            all_plans = json.load(f)
+        # Pin plan generation for this investigation (in-flight pinning)
+        try:
+            from bundles.importer import get_plans_for_generation, get_current_generation
+            _plan_gen = get_current_generation()
+            all_plans = get_plans_for_generation(_plan_gen)
+        except Exception:
+            # Fallback: load directly from file (bundle system not available)
+            plans_path = os.path.join(os.path.dirname(__file__), "..", "tools", "investigation_plans.json")
+            with open(plans_path) as f:
+                all_plans = json.load(f)
+
         # Match by task_type (try exact match, then alias, then substring, then benign fallback)
         task_type = ingest.task_type.lower().replace("-", "_")
         plan_data = all_plans.get(task_type) or all_plans.get(ingest.task_type)
@@ -745,14 +776,23 @@ async def _analyze_v3_tools(ingest: IngestOutput) -> AnalyzeOutput:
             )
             if is_benign:
                 plan_data = all_plans.get("benign_system_event")
+
+        # Tier enforcement: check if plan requires premium tier
+        if plan_data and isinstance(plan_data, dict) and plan_data.get("tier") == "premium":
+            if not _check_tenant_tier(ingest.tenant_id, "premium"):
+                activity.logger.info(f"Plan for {task_type} requires premium tier, falling through")
+                plan_data = None
+
         if plan_data:
+            # Support both {"plan": [...]} and raw list formats
+            plan_steps = plan_data["plan"] if isinstance(plan_data, dict) and "plan" in plan_data else plan_data
             generation_ms = int((time.time() - t0) * 1000)
             return AnalyzeOutput(
-                plan=plan_data["plan"], source="saved_plan", path_taken="A",
+                plan=plan_steps, source="saved_plan", path_taken="A",
                 execution_mode="tools", generation_ms=generation_ms,
             )
     except Exception as e:
-        activity.logger.warning(f"Failed to load investigation_plans.json: {e}")
+        activity.logger.warning(f"Failed to load investigation plans: {e}")
 
     # Template-only mode: no LLM fallback
     if ZOVARK_MODE == "templates-only":

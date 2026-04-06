@@ -214,6 +214,172 @@ export async function diagParseTest(
   );
 }
 
+// --- Zvadmin Commands ---
+
+export async function adminDiagnose(token: string) {
+  return request<{
+    checks: Array<{ name: string; status: string; detail: string }>;
+    overall: string;
+  }>("/api/v1/admin/diagnose", {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function adminAlerts(token: string, hours: number) {
+  return request<{
+    verdicts: Record<string, number>;
+    top_types: Array<{ type: string; count: number }>;
+    avg_latency_ms: number;
+    total: number;
+  }>("/api/v1/admin/alerts", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ hours }),
+  });
+}
+
+export async function adminModelCheck(token: string) {
+  return request<{
+    types: Array<{
+      name: string;
+      avg_risk: number;
+      attack_count: number;
+      benign_count: number;
+    }>;
+    separation_gap: number;
+  }>("/api/v1/admin/model-check", {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function adminDedupHealth(token: string) {
+  return request<{
+    decisions: Record<string, number>;
+    total: number;
+    efficiency: number;
+  }>("/api/v1/admin/dedup-health", {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function adminSystemStats(token: string) {
+  return request<{ task_count: number; redis_memory_mb: number }>(
+    "/api/v1/admin/system-stats",
+    {
+      headers: authHeaders(token),
+    }
+  );
+}
+
+// --- Forge ---
+
+export interface ForgeConfig {
+  total_alerts: number;
+  attack_ratio: number;
+  novelty_rate: number;
+  campaign_mode: boolean;
+  rate_per_second: number;
+  include_benign: boolean;
+}
+
+export interface ForgeResults {
+  total_submitted: number;
+  total_completed: number;
+  verdicts: Record<string, number>;
+  avg_risk_attack: number;
+  avg_risk_benign: number;
+  separation_gap: number;
+  avg_latency_ms: number;
+  p95_latency_ms: number;
+  novel_variants: number;
+  dedup_count: number;
+  error_count: number;
+  errors?: string[];
+  duration: string;
+}
+
+export interface ForgeJob {
+  id: string;
+  status: string;
+  progress: number;
+  results: ForgeResults;
+}
+
+export async function forgeStart(token: string, config: ForgeConfig) {
+  return request<{ job_id: string; status: string }>(
+    "/api/v1/admin/forge/start",
+    {
+      method: "POST",
+      headers: authHeaders(token),
+      body: JSON.stringify(config),
+    }
+  );
+}
+
+export async function forgeStatus(token: string, jobId: string) {
+  return request<ForgeJob>(`/api/v1/admin/forge/${jobId}`, {
+    headers: authHeaders(token),
+  });
+}
+
+export async function forgeStop(token: string, jobId: string) {
+  return request<{ status: string }>(`/api/v1/admin/forge/${jobId}/stop`, {
+    method: "POST",
+    headers: authHeaders(token),
+  });
+}
+
+export async function forgeHistory(token: string) {
+  return request<ForgeJob[]>("/api/v1/admin/forge/history", {
+    headers: authHeaders(token),
+  });
+}
+
+// --- Analytics ---
+
+export async function analyticsSummary(
+  token: string,
+  hours: number,
+  excludeForge: boolean
+) {
+  return request<{
+    total: number;
+    verdicts: Record<string, number>;
+    top_types: Array<{ type: string; count: number; avg_risk: number }>;
+    separation_gap: number;
+    latency_by_path: Record<string, number>;
+  }>("/api/v1/admin/analytics/summary", {
+    method: "POST",
+    headers: authHeaders(token),
+    body: JSON.stringify({ hours, exclude_forge: excludeForge }),
+  });
+}
+
+// --- Investigation Detail ---
+
+export async function getTaskDetail(token: string, id: string) {
+  return request<{
+    id: string;
+    task_type: string;
+    status: string;
+    created_at: string;
+    verdict: string;
+    risk_score: number;
+    path_taken: string;
+    tools_executed: Array<{ name: string; result_summary: string }>;
+    findings: string[];
+    iocs: Array<{ type: string; value: string }>;
+    mitre_attack: Array<{ technique: string; tactic: string; name: string }>;
+    summary: string;
+    siem_event: Record<string, unknown>;
+  }>(`/api/v1/tasks/${id}/detail`, {
+    headers: authHeaders(token),
+  });
+}
+
 // --- Types re-export for consumers ---
 
 export type {

@@ -260,19 +260,33 @@ echo "-- CATEGORY 6: BATCH + DEDUP INTERACTION --"
 # ── TEST 13: Batch buffer promotes severity ──
 echo ""
 echo "TEST 13: 5 alerts same IP, escalating severity -> batch representative = critical"
+# Flush stale batch keys from earlier tests so we only read our own
+docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning EVAL "
+  local keys = redis.call('KEYS','apibatch:*')
+  for _,k in ipairs(keys) do redis.call('DEL',k) end
+  return #keys
+" 0 2>/dev/null || true
 submit '{"task_type":"brute_force","input":{"prompt":"batch promo","severity":"info","siem_event":{"title":"BatchPromo","source_ip":"10.200.8.1","username":"root","rule_name":"BatchPromo","raw_log":"1 failed login from 10.200.8.1 info"}}}' > /dev/null
 sleep 1
 for SEV in low medium high critical; do
   submit "{\"task_type\":\"brute_force\",\"input\":{\"prompt\":\"batch promo $SEV\",\"severity\":\"$SEV\",\"siem_event\":{\"title\":\"BatchPromo\",\"source_ip\":\"10.200.8.1\",\"username\":\"root\",\"rule_name\":\"BatchPromo\",\"raw_log\":\"Batch promo test $SEV from 10.200.8.1 $RANDOM\"}}}" > /dev/null
 done
-# Read batch severity from Redis
-BSEV=$(docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning KEYS "apibatch:src:*" 2>/dev/null | head -1)
-if [ -n "$BSEV" ]; then
-  BATCH_SEV=$(docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning HGET "$BSEV" "severity" 2>/dev/null | tr -d '\r\n')
-  if [ "$BATCH_SEV" = "critical" ]; then log_pass "Batch promoted to critical severity"
-  elif [ -n "$BATCH_SEV" ]; then log_fail "Batch severity is '$BATCH_SEV' (expected critical)"
-  else log_skip "Could not read batch severity"; fi
-else log_skip "No batch keys found (may have expired)"; fi
+# Compute the exact batch key: SHA-256 of "brute_force:10.200.8.1", first 16 hex chars
+BATCH_HASH=$(echo -n "brute_force:10.200.8.1" | sha256sum | cut -c1-16)
+BKEY="apibatch:src:$BATCH_HASH"
+BATCH_SEV=$(docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning HGET "$BKEY" "severity" 2>/dev/null | tr -d '\r\n ')
+if [ "$BATCH_SEV" = "critical" ]; then log_pass "Batch promoted to critical severity"
+elif [ -n "$BATCH_SEV" ]; then log_fail "Batch severity is '$BATCH_SEV' (expected critical)"
+else
+  # Fallback: scan all batch keys in case hash computation differs
+  BSEV=$(docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning KEYS "apibatch:src:*" 2>/dev/null | tr -d '\r' | head -1)
+  if [ -n "$BSEV" ]; then
+    BATCH_SEV=$(docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning HGET "$BSEV" "severity" 2>/dev/null | tr -d '\r\n ')
+    if [ "$BATCH_SEV" = "critical" ]; then log_pass "Batch promoted to critical severity"
+    elif [ -n "$BATCH_SEV" ]; then log_fail "Batch severity is '$BATCH_SEV' (expected critical)"
+    else log_skip "Could not read batch severity"; fi
+  else log_skip "No batch keys found (may have expired)"; fi
+fi
 
 # ── TEST 14: Dedup (layer 1) and batch (layer 2) coexist ──
 echo ""

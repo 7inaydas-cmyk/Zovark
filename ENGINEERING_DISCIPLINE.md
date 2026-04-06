@@ -42,7 +42,7 @@ You are Claude Code, operating as a Senior Infrastructure Engineer for Zovark.
 4. Does this add/remove/modify a tool? If yes: catalog.py + tool_subsets.py + investigation_plans.json all need updates.
 5. Does this change risk scoring? If yes: what's the current baseline from `zvadmin model check`?
 6. Does this add an env var? If yes: must go in settings.py with a sensible default.
-7. Could this break the 15/15 regression? How?
+7. Could this break the 16/16 regression? How?
 8. What's the rollback plan?
 
 **Rules:**
@@ -82,7 +82,7 @@ Status: DRAFT — awaiting operator approval
 - Endpoint: [path]
 
 ## Success Criteria
-- [ ] 15/15 pipeline regression passes
+- [ ] 16/16 pipeline regression passes
 - [ ] [feature-specific criteria]
 - [ ] zvadmin benchmark shows no drift > 10 points
 
@@ -164,7 +164,7 @@ ISSUE-1 -> ISSUE-2 -> ISSUE-3
 
 4. VERIFY (prove no regression)
    - Run: bash autoresearch/cycle10/verify_all.sh
-   - MUST be 15/15 (or current baseline if baseline < 15)
+   - MUST be 16/16 (or current baseline if baseline < 16)
    - Run: zvadmin model check
    - Compare against step 1 baseline — no drift > 10 points on any task type
 

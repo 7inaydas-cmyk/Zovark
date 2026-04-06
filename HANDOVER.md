@@ -115,13 +115,13 @@ cmd/zvadmin/zvadmin.exe diagnose
 ### Pipeline Regression (4 min)
 ```bash
 bash autoresearch/cycle10/verify_all.sh
-# EXPECT: 15/15 (10 attacks ≥65 risk, 5 benign ≤25 risk)
+# EXPECT: 16/16 (11 attacks ≥65 risk incl. 1 Path C, 5 benign ≤25 risk)
 ```
 
 ### Dedup Stress Test (7 min)
 ```bash
 bash autoresearch/cycle10/dedup_stress_test.sh
-# EXPECT: 13-14/14 passed, 0 failed
+# EXPECT: 14/14 passed, 0 failed
 ```
 
 ### AutoResearch Cycle (4 min)
@@ -164,7 +164,7 @@ bash autoresearch/telemetry_driven/run.sh --hours 24 --max-tests 15 --wait 120
 | Testing only Path A types in regression | Path C was broken for months, regression never caught it | Add Path C (unknown type) alerts to regression suite |
 | Using str.format() with JSON templates | Literal {} braces are interpreted as format placeholders | Use .replace() or {{ }} escaping for JSON in prompts |
 | Fixing correct low-evidence scores | Generic test data produces low scores — that's correct | Only fix scoring if realistic test data also scores low |
-| Skipping AutoResearch after changes | AutoResearch finds regressions that 15/15 misses | Run AutoResearch after every significant change |
+| Skipping AutoResearch after changes | AutoResearch finds regressions that 16/16 misses | Run AutoResearch after every significant change |
 
 ---
 
@@ -226,11 +226,11 @@ bash autoresearch/telemetry_driven/run.sh --hours 24 --max-tests 15 --wait 120
 
 ---
 
-## 7. Current State (2026-04-04)
+## 7. Current State (2026-04-06)
 
 ### Working
-- 15/15 pipeline regression on Gemma 4 E4B via llama-server
-- 13/14 dedup stress test (1 fail = batch severity promotion Go Lua bug)
+- 16/16 pipeline regression on Gemma 4 E4B via llama-server (11 attacks incl. Path C + 5 benign)
+- 14/14 dedup stress test (batch severity promotion test fixed — was reading wrong Redis key)
 - Path C (LLM tool selection for unknown types) — FIXED 2026-04-05
 - Investigation-aware dedup with severity escalation, force reinvestigate
 - SIEM verdict push-back (Splunk HEC + Elastic + webhook)
@@ -246,22 +246,20 @@ bash autoresearch/telemetry_driven/run.sh --hours 24 --max-tests 15 --wait 120
 - Parallel tool execution (DAG builder + ThreadPoolExecutor, flag-gated, default OFF)
 - Engineering discipline framework (7 slash commands including /improvement-cycle)
 - Component registry (COMPONENT_REGISTRY.md)
-- Web-admin built (dist/, not served yet)
+- Web-admin served via nginx on port 3100 (zovark-web-admin container)
 - RLS migration 065 applied (zovark_app user created, FORCE ROW LEVEL SECURITY on 10 tables)
 - Healer memory leak mitigated (512MB container limit)
 - Improvement Cycle #1 completed with overnight autonomous batch
 
 ### Not Yet Done
-1. Dedup batch severity promotion fix (Go Lua — 13/14 → 14/14)
-2. Serve web-admin via nginx (built, not deployed)
-3. PgBouncer config for zovark_app user (migration applied, worker still uses superuser)
-4. Healthcare template pack (30 templates)
-5. A100 benchmark with parallel workers
-6. Customer tier dual-inference test on real GPU hardware
-7. Blue/green deployment with auto-rollback
-8. Healer memory leak root cause fix (mitigated, not solved)
-9. Merge v3.3-dev to master when ready
-10. Add Path C alerts to regression suite
+1. PgBouncer config for zovark_app user (migration applied, worker still uses superuser)
+2. Healthcare template pack (30 templates)
+3. A100 benchmark with parallel workers
+4. Customer tier dual-inference test on real GPU hardware
+5. Blue/green deployment with auto-rollback
+6. Healer memory leak root cause fix (mitigated, not solved)
+7. Merge v3.3-dev to master — quick wins done, ready for merge
+8. Intelligence Layer PRD execution (multi-model, attack paths, copilot — see docs/PRD_INTELLIGENCE_LAYER_ADDENDUM.md)
 
 ---
 

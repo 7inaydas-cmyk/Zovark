@@ -18,6 +18,51 @@ from dataclasses import asdict
 import httpx
 
 from temporalio import activity
+
+# Risk calibration anchor cache (loaded from DB, fallback to hardcoded)
+_calibration_cache: dict = {}
+_calibration_cache_time: float = 0.0
+_CALIBRATION_CACHE_TTL = 300  # 5 minutes
+
+
+def _load_risk_calibration_anchors(attack_type: str) -> list[dict]:
+    """Load risk calibration anchors from DB, fallback to empty.
+
+    DB overrides hardcoded prompts_v2.py anchors for same attack_type.
+    Cap: 10 anchors per attack_type (enforced by bundle schema).
+    """
+    global _calibration_cache, _calibration_cache_time
+    import time as _time
+    now = _time.time()
+    if (now - _calibration_cache_time) < _CALIBRATION_CACHE_TTL and _calibration_cache:
+        return _calibration_cache.get(attack_type, [])
+
+    try:
+        import psycopg2
+        from settings import settings as _settings
+        conn = psycopg2.connect(
+            os.environ.get("DATABASE_URL", _settings.database_url)
+        )
+        try:
+            with conn.cursor() as cur:
+                cur.execute(
+                    "SELECT attack_type, description, risk "
+                    "FROM risk_calibration_anchors ORDER BY attack_type, risk DESC"
+                )
+                new_cache: dict = {}
+                for row in cur.fetchall():
+                    at = row[0]
+                    if at not in new_cache:
+                        new_cache[at] = []
+                    new_cache[at].append({"description": row[1], "risk": row[2]})
+                _calibration_cache = new_cache
+                _calibration_cache_time = now
+        finally:
+            conn.close()
+    except Exception:
+        pass  # DB unavailable — use empty cache, fall back to prompts_v2.py
+
+    return _calibration_cache.get(attack_type, [])
 from stages import AssessOutput
 from stages.llm_gateway import llm_call, MODEL_CODE
 from stages.model_router import get_model_config

@@ -61,7 +61,7 @@
 ## Quality Gates
 | Gate | Command | When to run |
 |------|---------|-------------|
-| 15/15 Regression | bash autoresearch/cycle10/verify_all.sh | After ANY pipeline change |
+| 16/16 Regression | bash autoresearch/cycle10/verify_all.sh | After ANY pipeline change |
 | Dedup Stress | bash autoresearch/cycle10/dedup_stress_test.sh | After dedup changes |
 | AutoResearch Cycle | bash autoresearch/telemetry_driven/run.sh | After any change — finds hidden regressions |
 | Unit Tests | docker compose exec -T worker python -m pytest tests/ -q | After Python changes |
@@ -96,7 +96,7 @@
 | Temporal | zovark-temporal | 7233 | Workflow orchestration |
 | Healer | zovark-healer | — | Auto-recovery (512MB limit) |
 | OOB Watchdog | — | 9091 | Health monitoring |
-| Web Admin | web-admin/dist/ | — | Built, not served yet |
+| Web Admin | zovark-web-admin | 3100 | nginx:alpine, SPA fallback |
 | Signoz | tracing profile | 3301 | OTEL trace backend |
 
 ## Engineering Process
@@ -114,3 +114,7 @@
 | Benchmark Comparison | BENCHMARK_COMPARISON_v3.2.1.md | Model swap evaluation |
 | Overnight Batch | OVERNIGHT_REPORT.md | Autonomous stress test + fix cycle results |
 | Component Registry | COMPONENT_REGISTRY.md | Living inventory — check before every task |
+| Kanban Roadmap | Projects/Zovark_Roadmap.md | Session start, task selection |
+| Sprint Board | Projects/Sprint_C_Pipeline.md | Current sprint tracking |
+| Ship Process | Projects/ENGINEERING_PROCESS.md | Every session, every commit |
+| Session Protocol | Projects/SESSION_PROTOCOL.md | Session start and end |
