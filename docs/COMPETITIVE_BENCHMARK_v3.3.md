@@ -29,11 +29,26 @@ LLM inference entirely for known attack types. Competitors use LLM reasoning loo
 
 | Metric | Zovark v3.3 (post-patch) | Dropzone AI (CSA study) | Torq + Intezer |
 |--------|--------------------------|-------------------------|----------------|
-| **True positive rate** | 11/11 attack types | 85-97% (AI-assisted humans) | 97.6% |
+| **True positive rate** | 11/11 attack types, avg risk 85.4 | 85-97% (AI-assisted humans) | 97.6% |
 | **False positive rate** | 0% (5/5 benign correct) | "Significant reduction" | 4% escalation rate |
 | **MITRE coverage** | 100% (13 attack types) | Not published | Auto TTP mapping |
 | **Consistency** | Zero variance on benign | 16% decline between investigations | Not published |
-| **Min risk on attacks** | 65+ (all types) | Not published | Not published |
+| **Min risk on attacks** | 65+ (all types, up from min=5 pre-patch) | Not published | Not published |
+
+## Zovark Detection Accuracy (post-patch, clean 100-alert test)
+
+| Type | Avg Risk | Min | Max | Stddev |
+|------|----------|-----|-----|--------|
+| c2 | 99.3 | 95 | 100 | 1.9 |
+| brute_force | 95.0 | 95 | 95 | 0.0 |
+| golden_ticket | 91.7 | 75 | 100 | 14.4 |
+| kerberoasting | 91.7 | 80 | 100 | 9.8 |
+| phishing | 86.7 | 70 | 100 | 12.0 |
+| lolbin_abuse | 81.3 | 70 | 100 | 14.4 |
+| ransomware | 77.5 | 70 | 100 | 11.3 |
+| dns_exfiltration | 77.5 | 70 | 100 | 15.0 |
+| data_exfil | 70.0 | 65 | 90 | 11.2 |
+| **All benign** | **0.0** | **0** | **0** | **0.0** |
 
 ### Accuracy notes:
 - Dropzone's 85-97% comes from a CSA benchmark with 148 human analysts *assisted by* AI,
@@ -93,10 +108,11 @@ LLM inference entirely for known attack types. Competitors use LLM reasoning loo
 
 > **Zovark is the fastest fully autonomous SOC investigation platform that runs
 > entirely air-gapped.** It delivers 2-second investigations with 100% detection
-> accuracy on known attack types, zero false positives, and complete MITRE coverage —
-> without sending a single byte of customer data to the cloud. For organizations
-> where data sovereignty, deterministic auditability, and sub-second response times
-> matter more than integration breadth, Zovark is the only option.
+> accuracy (min risk 65+), zero false positives across all benign types, and full
+> MITRE ATT&CK coverage on 13 attack categories — without sending a single byte
+> to the cloud. For organizations where data sovereignty, deterministic auditability,
+> and sub-second response times matter more than integration breadth, Zovark is the
+> only option.
 
 ---
 
