@@ -282,9 +282,9 @@ function SIEMTab({ token }: { token: string }) {
       try {
         const configs = await getConfig(token);
         const cb = configs.find(
-          (c) => c.key === "ingest.circuit_breaker_active"
+          (c) => c.config_key === "ingest.circuit_breaker_active"
         );
-        setCbActive(cb?.value === "true");
+        setCbActive(cb?.config_value === "true");
       } catch {
         // config may not exist yet
       } finally {
@@ -526,13 +526,13 @@ function ConfigTab({ token }: { token: string }) {
           <div className="card divide-y divide-zinc-800/50 p-0 overflow-hidden">
             {configs.map((cfg) => (
               <div
-                key={cfg.key}
+                key={cfg.config_key}
                 className="flex items-center gap-4 px-4 py-3 hover:bg-zinc-800/30 transition-colors"
               >
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <code className="text-sm text-zinc-200 font-mono">
-                      {cfg.key}
+                      {cfg.config_key}
                     </code>
                     {cfg.is_secret && (
                       <span className="badge-yellow text-[10px]">SECRET</span>
@@ -545,7 +545,7 @@ function ConfigTab({ token }: { token: string }) {
                   </div>
                 </div>
 
-                {editingKey === cfg.key ? (
+                {editingKey === cfg.config_key ? (
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <input
                       type="text"
@@ -555,7 +555,7 @@ function ConfigTab({ token }: { token: string }) {
                       autoFocus
                     />
                     <button
-                      onClick={() => handleSave(cfg.key, cfg.is_secret)}
+                      onClick={() => handleSave(cfg.config_key, cfg.is_secret)}
                       disabled={saving}
                       className="text-emerald-400 hover:text-emerald-300 transition-colors"
                     >
@@ -575,13 +575,13 @@ function ConfigTab({ token }: { token: string }) {
                 ) : (
                   <div className="flex items-center gap-3 flex-shrink-0">
                     <code className="text-xs text-zinc-400 font-mono max-w-[200px] truncate">
-                      {cfg.is_secret ? "********" : cfg.value}
+                      {cfg.is_secret ? "********" : cfg.config_value}
                     </code>
                     {!cfg.is_secret && (
                       <button
                         onClick={() => {
-                          setEditingKey(cfg.key);
-                          setEditValue(cfg.value);
+                          setEditingKey(cfg.config_key);
+                          setEditValue(cfg.config_value);
                         }}
                         className="text-zinc-600 hover:text-zinc-400 transition-colors"
                       >

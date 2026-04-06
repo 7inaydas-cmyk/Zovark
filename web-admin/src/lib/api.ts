@@ -24,8 +24,8 @@ interface SystemHealth {
 }
 
 interface ConfigEntry {
-  key: string;
-  value: string;
+  config_key: string;
+  config_value: string;
   is_secret: boolean;
   updated_at: string;
   updated_by: string;
