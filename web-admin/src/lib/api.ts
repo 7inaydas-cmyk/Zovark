@@ -386,11 +386,14 @@ export async function analyticsSummary(
   excludeForge: boolean
 ) {
   return request<{
-    total: number;
     verdicts: Record<string, number>;
-    top_types: Array<{ type: string; count: number; avg_risk: number }>;
+    risk_buckets: Record<string, number>;
+    top_attacks: Array<{ name: string; count: number; avg_risk: number }>;
+    avg_attack_risk: number;
+    avg_benign_risk: number;
     separation_gap: number;
-    latency_by_path: Record<string, number>;
+    hours: number;
+    exclude_forge: boolean;
   }>("/api/v1/analytics/summary", {
     method: "POST",
     headers: authHeaders(token),

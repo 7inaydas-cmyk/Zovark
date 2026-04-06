@@ -52,6 +52,12 @@ func authMiddleware() gin.HandlerFunc {
 		}
 
 		authHeader := c.GetHeader("Authorization")
+		// Fallback to query param for SSE connections (browsers can't set headers on EventSource)
+		if authHeader == "" {
+			if qToken := c.Query("token"); qToken != "" {
+				authHeader = "Bearer " + qToken
+			}
+		}
 		if authHeader == "" {
 			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Authorization header required"})
 			return

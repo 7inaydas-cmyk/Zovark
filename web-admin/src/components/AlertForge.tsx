@@ -116,31 +116,42 @@ export default function AlertForge({ token }: AlertForgeProps) {
       // Start SSE connection for real-time updates
       const baseUrl =
         import.meta.env.VITE_API_URL || window.location.origin;
-      sseRef.current = new EventSource(
-        `${baseUrl}/api/v1/admin/forge/${jobId}/stream`
-      );
-      sseRef.current.onmessage = (event) => {
-        try {
-          const data = JSON.parse(event.data) as ForgeJob;
-          setCurrentJob(data);
-          if (
-            data.status === "completed" ||
-            data.status === "stopped" ||
-            data.status === "error"
-          ) {
-            setRunning(false);
-            if (pollRef.current) clearInterval(pollRef.current);
-            sseRef.current?.close();
-            loadHistory();
+      let reconnectAttempts = 0;
+      const connectSSE = () => {
+        const sseUrl = `${baseUrl}/api/v1/admin/forge/${jobId}/stream?token=${encodeURIComponent(token)}`;
+        sseRef.current = new EventSource(sseUrl);
+
+        sseRef.current.onmessage = (event) => {
+          reconnectAttempts = 0; // Reset on successful message
+          try {
+            const parsed = JSON.parse(event.data) as ForgeJob;
+            setCurrentJob(parsed);
+            if (
+              parsed.status === "completed" ||
+              parsed.status === "stopped" ||
+              parsed.status === "error"
+            ) {
+              setRunning(false);
+              if (pollRef.current) clearInterval(pollRef.current);
+              sseRef.current?.close();
+              loadHistory();
+            }
+          } catch {
+            // Ignore parse errors
           }
-        } catch {
-          // Ignore parse errors
-        }
+        };
+
+        sseRef.current.onerror = () => {
+          sseRef.current?.close();
+          // Reconnect with exponential backoff, max 5 attempts
+          if (reconnectAttempts < 5) {
+            reconnectAttempts++;
+            const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 10000);
+            setTimeout(() => connectSSE(), delay);
+          }
+        };
       };
-      sseRef.current.onerror = () => {
-        // SSE failed, fall back to polling only
-        sseRef.current?.close();
-      };
+      connectSSE();
 
       // Polling fallback (always runs alongside SSE for reliability)
       pollRef.current = setInterval(() => pollJob(jobId), 2000);

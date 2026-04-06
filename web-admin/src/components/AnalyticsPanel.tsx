@@ -41,11 +41,14 @@ const FALLBACK_COLORS = [
 ];
 
 interface SummaryData {
-  total: number;
   verdicts: Record<string, number>;
-  top_types: Array<{ type: string; count: number; avg_risk: number }>;
+  risk_buckets: Record<string, number>;
+  top_attacks: Array<{ name: string; count: number; avg_risk: number }>;
+  avg_attack_risk: number;
+  avg_benign_risk: number;
   separation_gap: number;
-  latency_by_path: Record<string, number>;
+  hours: number;
+  exclude_forge: boolean;
 }
 
 const TIME_RANGES = [
@@ -87,10 +90,10 @@ export default function AnalyticsPanel({ token }: AnalyticsPanelProps) {
       }))
     : [];
 
-  const typeBarData = data?.top_types
-    ? data.top_types.slice(0, 10).map((t) => ({
-        name: t.type.replace(/_/g, " "),
-        risk: t.avg_risk,
+  const typeBarData = data?.top_attacks
+    ? data.top_attacks.slice(0, 10).map((t) => ({
+        name: t.name.replace(/_/g, " "),
+        risk: Math.round(t.avg_risk * 10) / 10,
         count: t.count,
       }))
     : [];
@@ -167,7 +170,7 @@ export default function AnalyticsPanel({ token }: AnalyticsPanelProps) {
         <>
           {/* Summary cards */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <SummaryCard label="Total Investigations" value={String(data.total)} />
+            <SummaryCard label="Total Investigations" value={String(data.verdicts ? Object.values(data.verdicts).reduce((a, b) => a + b, 0) : 0)} />
             <SummaryCard
               label="Separation Gap"
               value={data.separation_gap.toFixed(1)}
@@ -301,57 +304,68 @@ export default function AnalyticsPanel({ token }: AnalyticsPanelProps) {
             </div>
           </div>
 
-          {/* Latency by path */}
-          {data.latency_by_path &&
-            Object.keys(data.latency_by_path).length > 0 && (
+          {/* Risk distribution buckets */}
+          {data.risk_buckets &&
+            Object.keys(data.risk_buckets).length > 0 && (
               <div className="card">
                 <h3 className="text-sm font-semibold text-zinc-200 mb-3">
-                  Latency by Investigation Path
+                  Risk Score Distribution
                 </h3>
                 <div className="overflow-x-auto">
                   <table className="w-full text-xs">
                     <thead>
                       <tr className="border-b border-zinc-800 text-zinc-500">
-                        <th className="text-left py-2 pr-4">Path</th>
-                        <th className="text-right py-2 pr-4">Avg Latency</th>
+                        <th className="text-left py-2 pr-4">Risk Range</th>
+                        <th className="text-right py-2 pr-4">Count</th>
                         <th className="text-left py-2" style={{ width: "50%" }}>
                           &nbsp;
                         </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(data.latency_by_path)
-                        .sort(([, a], [, b]) => b - a)
-                        .map(([path, latency]) => {
-                          const maxLatency = Math.max(
-                            ...Object.values(data.latency_by_path)
+                      {["0-20", "21-40", "41-60", "61-80", "81-100"].map(
+                        (bucket) => {
+                          const count = data.risk_buckets[bucket] || 0;
+                          const maxCount = Math.max(
+                            ...Object.values(data.risk_buckets)
                           );
                           const pct =
-                            maxLatency > 0 ? (latency / maxLatency) * 100 : 0;
+                            maxCount > 0 ? (count / maxCount) * 100 : 0;
+                          const color =
+                            bucket === "81-100"
+                              ? "bg-red-500"
+                              : bucket === "61-80"
+                                ? "bg-orange-500"
+                                : bucket === "41-60"
+                                  ? "bg-yellow-500"
+                                  : bucket === "21-40"
+                                    ? "bg-blue-500"
+                                    : "bg-emerald-500";
                           return (
                             <tr
-                              key={path}
+                              key={bucket}
                               className="border-b border-zinc-800/50"
                             >
                               <td className="py-2 pr-4">
                                 <code className="text-zinc-300 font-mono">
-                                  {path}
+                                  {bucket}
                                 </code>
                               </td>
                               <td className="py-2 pr-4 text-right text-zinc-400">
-                                {latency.toFixed(0)}ms
+                                {count}
                               </td>
                               <td className="py-2">
                                 <div className="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
                                   <div
-                                    className="h-full bg-emerald-500 rounded-full"
+                                    className={`h-full ${color} rounded-full`}
                                     style={{ width: `${pct}%` }}
                                   />
                                 </div>
                               </td>
                             </tr>
                           );
-                        })}
+                        }
+                      )}
                     </tbody>
                   </table>
                 </div>
