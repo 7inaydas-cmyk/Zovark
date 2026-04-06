@@ -123,9 +123,39 @@ export async function breakglassLogin(
 export async function getSystemHealth(
   token: string
 ): Promise<SystemHealth> {
-  return request<SystemHealth>("/api/v1/admin/system/health", {
-    headers: authHeaders(token),
+  // The Go API returns raw OOB state — transform into SystemHealth shape
+  const raw = await request<Record<string, unknown>>(
+    "/api/v1/admin/system/health",
+    { headers: authHeaders(token) }
+  );
+
+  const oob = (raw.oob ?? {}) as Record<string, unknown>;
+
+  // Build services array from OOB check results
+  const serviceKeys = ["api", "postgres", "redis", "temporal", "inference"];
+  const services: ServiceHealth[] = serviceKeys.map((key) => {
+    const val = oob[key];
+    const healthy = val === "ok" || val === "healthy";
+    return {
+      name: key,
+      status: healthy ? "healthy" : val === undefined ? "down" : "degraded",
+      details: typeof val === "string" ? val : undefined,
+    };
   });
+
+  // Derive overall status
+  const allHealthy = services.every((s) => s.status === "healthy");
+  const anyDown = services.some((s) => s.status === "down");
+
+  return {
+    status: allHealthy ? "healthy" : anyDown ? "down" : "degraded",
+    services,
+    gpu_tier: typeof oob.gpu_tier === "string" ? oob.gpu_tier : undefined,
+    uptime_seconds:
+      typeof raw.uptime_seconds === "number"
+        ? raw.uptime_seconds
+        : undefined,
+  };
 }
 
 // --- Config ---
