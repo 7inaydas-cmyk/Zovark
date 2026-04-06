@@ -616,7 +616,7 @@ function ConfigTab({ token }: { token: string }) {
               >
                 <div className="flex items-center gap-3">
                   <code className="text-xs font-semibold text-zinc-200 font-mono">
-                    {entry.key}
+                    {entry.config_key}
                   </code>
                   <span className="text-xs text-zinc-600">
                     <span className="line-through text-zinc-600">

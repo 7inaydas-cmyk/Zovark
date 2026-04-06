@@ -33,11 +33,12 @@ interface ConfigEntry {
 
 interface ConfigAuditEntry {
   id: string;
-  key: string;
+  config_key: string;
   old_value: string;
   new_value: string;
   changed_by: string;
   changed_at: string;
+  action?: string;
 }
 
 interface TaskResponse {
@@ -163,9 +164,14 @@ export async function getSystemHealth(
 export async function getConfig(
   token: string
 ): Promise<ConfigEntry[]> {
-  return request<ConfigEntry[]>("/api/v1/admin/config", {
-    headers: authHeaders(token),
-  });
+  const raw = await request<{ configs?: ConfigEntry[] } | ConfigEntry[]>(
+    "/api/v1/admin/config",
+    { headers: authHeaders(token) }
+  );
+  // API wraps in {configs: [...]} — unwrap if needed
+  if (Array.isArray(raw)) return raw;
+  if (raw && Array.isArray((raw as any).configs)) return (raw as any).configs;
+  return [];
 }
 
 export async function upsertConfig(
@@ -184,9 +190,13 @@ export async function upsertConfig(
 export async function getConfigAudit(
   token: string
 ): Promise<ConfigAuditEntry[]> {
-  return request<ConfigAuditEntry[]>("/api/v1/admin/config/audit", {
+  const raw = await request<{ entries?: ConfigAuditEntry[] } | ConfigAuditEntry[]>(
+    "/api/v1/admin/config/audit", {
     headers: authHeaders(token),
   });
+  if (Array.isArray(raw)) return raw;
+  if (raw && Array.isArray((raw as any).entries)) return (raw as any).entries;
+  return [];
 }
 
 // --- Bootstrap / Synthetic ---
