@@ -150,6 +150,9 @@ def detect_golden_ticket(siem_event: dict) -> dict:
         (r'\bkrbtgt.*hash\b', "krbtgt hash reference — Golden Ticket prerequisite", 50),
         (r'\bticket.*forg\w+\b', "Ticket forgery language detected", 45),
         (r'\bntds\.dit\b', "NTDS.dit access — domain credential extraction", 40),
+        (r'\babnormal\w*\s+(?:ticket\s+)?lifetime\b', "Abnormal ticket lifetime detected", 40),
+        (r'\btgt\b.*\babnormal\b', "TGT with abnormal characteristics detected", 45),
+        (r'\bforged\b|\bfake\b.*\btgt\b', "Forged/fake TGT reference detected", 50),
     ]
     for pattern, description, score in golden_ticket_keywords:
         if re.search(pattern, raw_lower):
