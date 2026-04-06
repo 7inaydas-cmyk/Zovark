@@ -38,10 +38,26 @@ def detect_kerberoasting(siem_event: dict) -> dict:
     iocs = []
     risk = 0
 
+    raw_lower = raw_log.lower()
+
     parsed = parse_windows_event(raw_log)
     event_id = parsed.get("EventID", "")
     encryption = parsed.get("TicketEncryptionType", "")
     service_name = parsed.get("ServiceName", "")
+
+    # Raw log keyword fallback — catches narrative SIEM alerts
+    kerberoast_keywords = [
+        (r'\bkerberoast\w*\b', "Kerberoasting keyword detected", 40),
+        (r'\bservice\s*ticket\s*crack\w*\b', "Service ticket cracking detected", 35),
+        (r'\bspn\s*scan\b', "SPN scanning detected — Kerberoasting recon", 30),
+        (r'\brubeus\b.*\bkerberoast\b', "Rubeus Kerberoasting detected", 50),
+        (r'\binvoke-kerberoast\b', "Invoke-Kerberoast PowerShell detected", 50),
+        (r'\bgetuserspns\b', "GetUserSPNs — Kerberoasting tool", 45),
+    ]
+    for pattern, description, score in kerberoast_keywords:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
 
     # RC4 encryption (0x17) — primary indicator
     if encryption == "0x17":
@@ -115,6 +131,26 @@ def detect_golden_ticket(siem_event: dict) -> dict:
     ticket_options = parsed.get("TicketOptions", "")
     lifetime = parsed.get("Lifetime", "")
 
+    raw_lower = raw_log.lower()
+
+    # Raw log keyword detection — catches narrative SIEM alerts that don't parse into structured fields
+    golden_ticket_keywords = [
+        (r'\bgolden\s*ticket\b', "Golden Ticket attack keyword detected", 45),
+        (r'\bmimikatz\b', "Mimikatz tool detected — credential theft/ticket forging", 50),
+        (r'\bforged\s+tg[ts]\b', "Forged Kerberos ticket detected", 50),
+        (r'\bkekeo\b', "Kekeo tool detected — Kerberos ticket manipulation", 45),
+        (r'\brubeus\b', "Rubeus tool detected — Kerberos abuse toolkit", 45),
+        (r'\boverpass.the.hash\b', "Overpass-the-hash technique detected", 40),
+        (r'\bpass.the.ticket\b', "Pass-the-ticket technique detected", 40),
+        (r'\bkrbtgt.*hash\b', "krbtgt hash reference — Golden Ticket prerequisite", 50),
+        (r'\bticket.*forg\w+\b', "Ticket forgery language detected", 45),
+        (r'\bntds\.dit\b', "NTDS.dit access — domain credential extraction", 40),
+    ]
+    for pattern, description, score in golden_ticket_keywords:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
     # TGT request with RC4
     if event_id == "4768" and encryption == "0x17":
         findings.append("TGT request with RC4 encryption — possible Golden Ticket")
@@ -161,6 +197,10 @@ def detect_golden_ticket(siem_event: dict) -> dict:
     if username:
         iocs.append(_make_ioc("username", username, raw_log))
 
+    # Golden ticket with tool/technique keywords = high confidence
+    if findings and risk < 75:
+        risk = max(risk, 75)
+
     if not findings:
         risk = max(risk, 10)
 
@@ -175,6 +215,19 @@ def detect_ransomware(siem_event: dict) -> dict:
     risk = 0
 
     raw_lower = raw_log.lower()
+
+    # Raw log keyword fallback — catches narrative SIEM alerts
+    ransomware_keywords = [
+        (r'\bransomware\b', "Ransomware keyword detected", 35),
+        (r'\b(?:lockbit|conti|revil|blackcat|alphv|clop|royal|akira|rhysida|play)\b', "Known ransomware family detected", 45),
+        (r'\bfiles?\s+encrypt\w+\b', "File encryption language detected", 30),
+        (r'\bdecryption\s+key\b', "Decryption key reference — ransom context", 30),
+        (r'\bwannacry\b', "WannaCry ransomware detected", 45),
+    ]
+    for pattern, description, score in ransomware_keywords:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
 
     # Shadow copy deletion
     if re.search(r'vssadmin\s+delete\s+shadows', raw_lower):
@@ -470,14 +523,29 @@ def detect_data_exfil(siem_event: dict) -> dict:
         findings.append("Suspicious access pattern detected")
         risk += 25
 
+    # Keyword fallback — catches narrative SIEM alerts
+    exfil_keywords = [
+        (r'\bexfiltrat\w+\b', "Exfiltration keyword detected", 20),
+        (r'\bdata\s+(?:theft|leak|stolen|breach)\b', "Data theft/breach language detected", 20),
+        (r'\bunauthorized\s+(?:transfer|copy|download|access)\b', "Unauthorized data movement detected", 20),
+        (r'\bstaging\s+(?:area|server|directory)\b', "Data staging detected", 15),
+        (r'\bbulk\s+(?:download|export|transfer|copy)\b', "Bulk data movement detected", 20),
+        (r'\bsensitive\s+(?:data|files|documents)\b', "Sensitive data reference", 10),
+    ]
+    for pattern, description, score in exfil_keywords:
+        if re.search(pattern, raw_lower):
+            if not any(description in f for f in findings):
+                findings.append(description)
+                risk += score
+
     src_ip = siem_event.get("source_ip", "")
     if src_ip and not any(i["value"] == src_ip for i in iocs):
         iocs.append(_make_ioc("ipv4", src_ip, raw_log))
     
     # Exfiltration indicators require minimum risk
-    if findings and risk >= 20 and risk < 55:
-        risk = 55  # Ensure detection when indicators present
-    
+    if findings and risk < 65:
+        risk = 65  # Ensure detection when indicators present
+
     if not findings:
         risk = max(risk, 5)
 
