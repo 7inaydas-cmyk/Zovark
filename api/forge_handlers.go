@@ -411,13 +411,20 @@ func runForgeJob(ctx context.Context, job *ForgeJob, token string) {
 		}
 
 		// Check for dedup/batch responses
+		wasBatched := false
 		if status, ok := result["status"].(string); ok {
 			if status == "deduplicated" || status == "batched" {
 				dedupCount++
+				wasBatched = true
+				// Use parent ID for tracking — the batched/deduped ID has no DB row
+				if pid, ok := result["batch_parent_id"].(string); ok && pid != "" {
+					taskID = pid
+				}
 			}
 		}
 
-		if taskID != "" {
+		if taskID != "" && !wasBatched {
+			// Only track non-batched tasks for result collection
 			job.mu.Lock()
 			job.taskIDs = append(job.taskIDs, taskID)
 			job.isAttack[taskID] = entry.attack
@@ -454,7 +461,8 @@ func runForgeJob(ctx context.Context, job *ForgeJob, token string) {
 		job.ID, job.Results.TotalCompleted, job.Results.TotalSubmitted, job.Results.SeparationGap)
 }
 
-// collectForgeResults polls each submitted task and aggregates statistics.
+// collectForgeResults queries the DB directly to collect task results.
+// Avoids HTTP rate limiting by using dbPool instead of self-calling the API.
 func collectForgeResults(ctx context.Context, job *ForgeJob, token string, timeout time.Duration) {
 	job.mu.Lock()
 	taskIDs := make([]string, len(job.taskIDs))
@@ -465,8 +473,6 @@ func collectForgeResults(ctx context.Context, job *ForgeJob, token string, timeo
 		return
 	}
 
-	httpClient := &http.Client{Timeout: 10 * time.Second}
-	apiBase := fmt.Sprintf("http://localhost:%s", appConfig.Port)
 	deadline := time.Now().Add(timeout)
 
 	// Track per-task results
@@ -481,7 +487,7 @@ func collectForgeResults(ctx context.Context, job *ForgeJob, token string, timeo
 		results[id] = &taskResult{}
 	}
 
-	// Poll in rounds until all complete or timeout
+	// Poll DB in rounds until all complete or timeout
 	for time.Now().Before(deadline) {
 		select {
 		case <-ctx.Done():
@@ -489,59 +495,58 @@ func collectForgeResults(ctx context.Context, job *ForgeJob, token string, timeo
 		default:
 		}
 
-		allDone := true
-		for _, taskID := range taskIDs {
-			tr := results[taskID]
-			if tr.completed {
+		// Batch query all incomplete tasks at once
+		incompleteIDs := []string{}
+		for _, id := range taskIDs {
+			if !results[id].completed {
+				incompleteIDs = append(incompleteIDs, id)
+			}
+		}
+		if len(incompleteIDs) == 0 {
+			break
+		}
+
+		rows, err := dbPool.Query(ctx,
+			`SELECT id, status, output, created_at, completed_at
+			 FROM agent_tasks WHERE id = ANY($1::uuid[])`,
+			incompleteIDs)
+		if err != nil {
+			log.Printf("[FORGE] DB query error in collector: %v", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+
+		for rows.Next() {
+			var id, status string
+			var output interface{}
+			var createdAt, completedAt interface{}
+			if err := rows.Scan(&id, &status, &output, &createdAt, &completedAt); err != nil {
 				continue
 			}
 
-			req, err := http.NewRequestWithContext(ctx, "GET",
-				fmt.Sprintf("%s/api/v1/tasks/%s", apiBase, taskID), nil)
-			if err != nil {
-				continue
-			}
-			req.Header.Set("Authorization", "Bearer "+token)
-
-			resp, err := httpClient.Do(req)
-			if err != nil {
-				allDone = false
-				continue
-			}
-
-			var data map[string]interface{}
-			respBody, _ := io.ReadAll(resp.Body)
-			resp.Body.Close()
-			json.Unmarshal(respBody, &data)
-
-			status, _ := data["status"].(string)
+			tr := results[id]
 			if status == "completed" || status == "failed" || status == "error" {
 				tr.completed = true
 
-				// Extract verdict and risk from output sub-object
-				if output, ok := data["output"].(map[string]interface{}); ok {
-					if v, ok := output["verdict"].(string); ok {
+				// Extract verdict and risk from output JSONB
+				if outputMap, ok := output.(map[string]interface{}); ok {
+					if v, ok := outputMap["verdict"].(string); ok {
 						tr.verdict = v
 					}
-					if r, ok := output["risk_score"].(float64); ok {
+					if r, ok := outputMap["risk_score"].(float64); ok {
 						tr.riskScore = r
 					}
 				}
 
-				// Calculate latency from created_at to updated_at
-				if createdStr, ok := data["created_at"].(string); ok {
-					if updatedStr, ok := data["updated_at"].(string); ok {
-						created, e1 := time.Parse(time.RFC3339Nano, createdStr)
-						updated, e2 := time.Parse(time.RFC3339Nano, updatedStr)
-						if e1 == nil && e2 == nil {
-							tr.latencyMs = float64(updated.Sub(created).Milliseconds())
-						}
+				// Calculate latency
+				if ct, ok := createdAt.(time.Time); ok {
+					if ca, ok := completedAt.(time.Time); ok {
+						tr.latencyMs = float64(ca.Sub(ct).Milliseconds())
 					}
 				}
-			} else {
-				allDone = false
 			}
 		}
+		rows.Close()
 
 		// Update progress
 		completed := 0
@@ -554,7 +559,7 @@ func collectForgeResults(ctx context.Context, job *ForgeJob, token string, timeo
 		job.Progress = 50 + int(float64(completed)/float64(len(taskIDs))*50) // 50-100%
 		job.mu.Unlock()
 
-		if allDone {
+		if completed == len(taskIDs) {
 			break
 		}
 
