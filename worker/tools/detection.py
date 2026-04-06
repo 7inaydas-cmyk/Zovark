@@ -42,17 +42,22 @@ def detect_kerberoasting(siem_event: dict) -> dict:
 
     parsed = parse_windows_event(raw_log)
     event_id = parsed.get("EventID", "")
-    encryption = parsed.get("TicketEncryptionType", "")
+    # Accept both TicketEncryptionType and EncryptionType (SIEM format varies)
+    encryption = parsed.get("TicketEncryptionType", "") or parsed.get("EncryptionType", "")
     service_name = parsed.get("ServiceName", "")
 
     # Raw log keyword fallback — catches narrative SIEM alerts
     kerberoast_keywords = [
         (r'\bkerberoast\w*\b', "Kerberoasting keyword detected", 40),
         (r'\bservice\s*ticket\s*crack\w*\b', "Service ticket cracking detected", 35),
-        (r'\bspn\s*scan\b', "SPN scanning detected — Kerberoasting recon", 30),
+        (r'\bspn\w*\b.*\brc4\b', "SPN with RC4 encryption — Kerberoasting indicator", 45),
+        (r'\btgs\s+request\w*\b', "TGS ticket request detected", 25),
+        (r'\brc4.hmac\b', "RC4-HMAC encryption — weak Kerberos cipher", 30),
         (r'\brubeus\b.*\bkerberoast\b', "Rubeus Kerberoasting detected", 50),
         (r'\binvoke-kerberoast\b', "Invoke-Kerberoast PowerShell detected", 50),
         (r'\bgetuserspns\b', "GetUserSPNs — Kerberoasting tool", 45),
+        (r'\bspn\s*(?:enum|scan)\w*\b', "SPN enumeration detected — Kerberoasting recon", 30),
+        (r'\b(?:50|100|\d{2,})\s+tgs\b', "Mass TGS requests — Kerberoasting pattern", 35),
     ]
     for pattern, description, score in kerberoast_keywords:
         if re.search(pattern, raw_lower):
@@ -329,16 +334,32 @@ def detect_phishing(siem_event: dict) -> dict:
     if re.search(r'from:?\s*\S+@\S+', raw_lower) and domains:
         findings.append("Email with embedded URLs detected")
         risk += 5
-    
+
+    # BEC (Business Email Compromise) — no URLs needed
+    bec_executive = bool(re.search(r'from:?\s*(?:ceo|cfo|coo|cto|president|director|vp)\b', raw_lower))
+    bec_payment = bool(re.search(r'\b(?:wire\s+transfer|payment|invoice|bank\s+account|routing\s+number)\b', raw_lower))
+    bec_originating_ip = bool(re.search(r'x-originating-ip:', raw_lower))
+    if bec_executive:
+        findings.append("Executive impersonation detected (BEC pattern)")
+        risk += 25
+    if bec_payment:
+        findings.append("Financial transaction language in email (BEC pattern)")
+        risk += 20
+    if bec_executive and bec_payment:
+        risk += 15  # Compound: executive + payment = high confidence BEC
+    if bec_originating_ip:
+        findings.append("X-Originating-IP header present — external email source")
+        risk += 10
+
     # Reduce false positives for internal IT notifications
     is_internal_notification = bool(re.search(r'internal|company policy|it department|system administrator', raw_lower))
     if is_internal_notification and risk < 70:
         risk = min(risk, 25)  # Cap risk for internal notifications
-    
-    # Phishing indicators require minimum risk
-    elif findings and risk >= 30 and risk < 55:
+
+    # Phishing/BEC indicators require minimum risk
+    elif findings and risk < 55:
         risk = 55  # Ensure detection when clear indicators present
-    
+
     if not findings:
         risk = max(risk, 5)
 
@@ -526,11 +547,17 @@ def detect_data_exfil(siem_event: dict) -> dict:
     # Keyword fallback — catches narrative SIEM alerts
     exfil_keywords = [
         (r'\bexfiltrat\w+\b', "Exfiltration keyword detected", 20),
+        (r'\bexfil\b', "Exfiltration shorthand detected", 20),
         (r'\bdata\s+(?:theft|leak|stolen|breach)\b', "Data theft/breach language detected", 20),
         (r'\bunauthorized\s+(?:transfer|copy|download|access)\b', "Unauthorized data movement detected", 20),
         (r'\bstaging\s+(?:area|server|directory)\b', "Data staging detected", 15),
         (r'\bbulk\s+(?:download|export|transfer|copy)\b', "Bulk data movement detected", 20),
         (r'\bsensitive\s+(?:data|files|documents)\b', "Sensitive data reference", 10),
+        (r'\bhigh.entropy\b', "High-entropy traffic detected — potential covert channel", 15),
+        (r'\bencoding\s+data\b', "Data encoding for transfer detected", 15),
+        (r'\bdns\s+(?:tunnel|exfil|covert)\b', "DNS-based exfiltration technique", 25),
+        (r'\bdata\s+in\s+subdomains?\b', "Subdomain-encoded data transfer", 25),
+        (r'\b\d+\s+queries\s+in\s+\d+\s+minutes?\b', "High-frequency query burst detected", 15),
     ]
     for pattern, description, score in exfil_keywords:
         if re.search(pattern, raw_lower):
