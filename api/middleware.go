@@ -34,7 +34,7 @@ func corsMiddleware() gin.HandlerFunc {
 		}
 		config.AllowOrigins = origins
 	} else {
-		config.AllowOrigins = []string{"http://localhost:3000", "http://localhost:5173"}
+		config.AllowOrigins = []string{"http://localhost:3000", "http://localhost:3100", "http://localhost:5173"}
 	}
 
 	config.AllowCredentials = true

@@ -351,7 +351,7 @@ export async function analyticsSummary(
     top_types: Array<{ type: string; count: number; avg_risk: number }>;
     separation_gap: number;
     latency_by_path: Record<string, number>;
-  }>("/api/v1/admin/analytics/summary", {
+  }>("/api/v1/analytics/summary", {
     method: "POST",
     headers: authHeaders(token),
     body: JSON.stringify({ hours, exclude_forge: excludeForge }),
