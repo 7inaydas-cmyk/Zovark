@@ -4,9 +4,9 @@ kanban-plugin: basic
 
 ## Doing
 
-- [ ] C1: Remediation engine
 - [ ] C2: Copilot API
 - [ ] C3: License enforcement
+- [ ] Dashboard v2: time series, attack breakdown, error panel
 
 ## Up Next
 
@@ -23,7 +23,13 @@ kanban-plugin: basic
 ## Backlog
 
 - [ ] Clean stale Ollama refs (airgap, test, dpo)
-- [ ] Fix 35 test failures (3 bundle import, 4 egress, rest pre-existing)
+- [x] C1: Remediation engine (4 endpoints, 22 attack types, migration 067)
+- [x] Bundle test fixes (conftest.py, 6 failures → 0)
+- [x] Detection calibration (golden_ticket, kerberoasting, ransomware, data_exfil, phishing BEC)
+- [x] Dashboard v1 (PipelineMonitor, AnalyticsPanel fixes, SSE reconnect)
+- [x] Security audit fixes (ReDoS, JSON injection, info disclosure)
+- [x] Red team patches (7 E2E bypasses, 66 content scanner patterns)
+- [ ] Fix remaining test failures (4 egress, rest pre-existing)
 - [ ] Asset TTL cleanup
 - [ ] Attack path analyst feedback
 - [ ] Ticket integration (Jira/ServiceNow)

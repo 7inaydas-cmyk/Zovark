@@ -17,6 +17,10 @@ import {
   Tooltip,
   ResponsiveContainer,
   Legend,
+  AreaChart,
+  Area,
+  LineChart,
+  Line,
 } from "recharts";
 import { analyticsSummary, pipelineStatus } from "../lib/api";
 import type { PipelineStatus } from "../lib/api";
@@ -246,6 +250,59 @@ export default function AnalyticsPanel({ token }: AnalyticsPanelProps) {
             />
           </div>
 
+          {/* Time-series charts from pipeline status */}
+          {pipeline && (pipeline.throughput_series?.length > 0 || pipeline.latency_series?.length > 0) && (
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {pipeline.throughput_series?.length > 0 && (
+                <div className="card">
+                  <h3 className="text-sm font-semibold text-zinc-200 mb-3">
+                    Investigation Throughput (30m)
+                  </h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <AreaChart data={pipeline.throughput_series} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
+                      <defs>
+                        <linearGradient id="tpGrad" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
+                          <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 9 }} stroke="#3f3f46" />
+                      <YAxis tick={{ fill: "#71717a", fontSize: 9 }} stroke="#3f3f46" />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: "6px", fontSize: "12px" }}
+                        labelStyle={{ color: "#e4e4e7" }}
+                        formatter={(v: number) => [`${v}`, "Completed"]}
+                      />
+                      <Area type="monotone" dataKey="value" stroke="#10b981" fill="url(#tpGrad)" strokeWidth={2} />
+                    </AreaChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+              {pipeline.latency_series?.length > 0 && (
+                <div className="card">
+                  <h3 className="text-sm font-semibold text-zinc-200 mb-3">
+                    Investigation Latency (30m)
+                  </h3>
+                  <ResponsiveContainer width="100%" height={180}>
+                    <LineChart data={pipeline.latency_series} margin={{ top: 5, right: 10, bottom: 20, left: 10 }}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#27272a" />
+                      <XAxis dataKey="time" tick={{ fill: "#71717a", fontSize: 9 }} stroke="#3f3f46" />
+                      <YAxis tick={{ fill: "#71717a", fontSize: 9 }} stroke="#3f3f46" tickFormatter={(v: number) => `${(v / 1000).toFixed(0)}s`} />
+                      <Tooltip
+                        contentStyle={{ backgroundColor: "#18181b", border: "1px solid #3f3f46", borderRadius: "6px", fontSize: "12px" }}
+                        labelStyle={{ color: "#e4e4e7" }}
+                        formatter={(v: number, name: string) => [`${(v / 1000).toFixed(1)}s`, name === "avg_ms" ? "Avg" : "P95"]}
+                      />
+                      <Line type="monotone" dataKey="avg_ms" stroke="#10b981" strokeWidth={2} dot={false} name="avg_ms" />
+                      <Line type="monotone" dataKey="p95_ms" stroke="#ef4444" strokeWidth={1.5} strokeDasharray="4 2" dot={false} name="p95_ms" />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Charts row */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Verdict pie chart */}
@@ -415,6 +472,48 @@ export default function AnalyticsPanel({ token }: AnalyticsPanelProps) {
                 </div>
               </div>
             )}
+          {/* Attack type breakdown table */}
+          {pipeline?.attack_breakdown && pipeline.attack_breakdown.length > 0 && (
+            <div className="card">
+              <h3 className="text-sm font-semibold text-zinc-200 mb-3">
+                Attack Type Detail (30m window)
+              </h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-xs font-mono">
+                  <thead>
+                    <tr className="border-b border-zinc-800 text-zinc-500">
+                      <th className="text-left py-2 pr-3">Type</th>
+                      <th className="text-right py-2 px-3">Count</th>
+                      <th className="text-right py-2 px-3">Avg Risk</th>
+                      <th className="text-right py-2 px-3">Min</th>
+                      <th className="text-right py-2 px-3">Max</th>
+                      <th className="text-right py-2 px-3">Stddev</th>
+                      <th className="text-right py-2 pl-3">Avg Latency</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pipeline.attack_breakdown.map((a) => (
+                      <tr key={a.type} className="border-b border-zinc-800/50">
+                        <td className="py-1.5 pr-3 text-zinc-300">{a.type.replace(/_/g, " ")}</td>
+                        <td className="py-1.5 px-3 text-right text-zinc-400">{a.count}</td>
+                        <td className={`py-1.5 px-3 text-right font-bold ${
+                          a.avg_risk >= 85 ? "text-emerald-400" : a.avg_risk >= 65 ? "text-yellow-400" : "text-red-400"
+                        }`}>{a.avg_risk.toFixed(1)}</td>
+                        <td className="py-1.5 px-3 text-right text-zinc-500">{a.min_risk}</td>
+                        <td className="py-1.5 px-3 text-right text-zinc-500">{a.max_risk}</td>
+                        <td className={`py-1.5 px-3 text-right ${
+                          a.stddev < 5 ? "text-emerald-400" : a.stddev <= 15 ? "text-yellow-400" : "text-red-400"
+                        }`}>{a.stddev.toFixed(1)}</td>
+                        <td className="py-1.5 pl-3 text-right text-zinc-400">
+                          {(a.avg_latency_ms / 1000).toFixed(1)}s
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </>
       ) : null}
     </div>

@@ -15,20 +15,20 @@ kanban-plugin: basic
 
 ## C1: Remediation Engine
 
-- [ ] Create worker/intelligence/remediation.py
-- [ ] RemediationEngine class with suggest_action() deterministic rules
-- [ ] Circuit breaker: MAX_VERIFICATION_ATTEMPTS = 3 per attack_type per 24h
-- [ ] Rate limiter: MAX_SYNTHETIC_PER_HOUR = 10 per tenant
-- [ ] Kill switch: system_configs `remediation.auto_verify_enabled` (default false)
-- [ ] Regression check logic: submit test alert of same type, compare verdict, NOT actual remediation check
-- [ ] Suggestion engine: deterministic rules based on attack_type + historical success rates
-- [ ] API: POST /api/v1/remediation/suggest {investigation_id}
-- [ ] API: POST /api/v1/remediation/verify {remediation_id}
-- [ ] API: GET /api/v1/remediation/actions {tenant_id, status filter}
-- [ ] Go handlers: api/remediation_handlers.go
-- [ ] Route registration in main.go
-- [ ] Unit tests: circuit breaker opens after 3, rate limiter blocks at 10, kill switch disables
-- [ ] verify_all.sh 16/16
+- [x] Create worker/intelligence/remediation.py
+- [x] RemediationEngine class with suggest_action() deterministic rules
+- [x] Circuit breaker: MAX_VERIFICATION_ATTEMPTS = 3 per attack_type per 24h
+- [x] Rate limiter: MAX_SYNTHETIC_PER_HOUR = 10 per tenant
+- [x] Kill switch: system_configs `remediation.auto_verify_enabled` (default false)
+- [x] Regression check logic: submit test alert of same type, compare verdict, NOT actual remediation check
+- [x] Suggestion engine: deterministic rules based on attack_type + historical success rates
+- [x] API: POST /api/v1/remediation/suggest {investigation_id}
+- [x] API: POST /api/v1/remediation/verify {remediation_id}
+- [x] API: GET /api/v1/remediation/actions {tenant_id, status filter}
+- [x] Go handlers: api/remediation_handlers.go
+- [x] Route registration in main.go
+- [x] Unit tests: circuit breaker opens after 3, rate limiter blocks at 10, kill switch disables
+- [x] verify_all.sh 16/16
 
 ## C2: Copilot API
 

@@ -413,7 +413,7 @@ export interface PipelineStatus {
   p95_latency_ms: number;
   verdict_distribution: Record<string, number>;
   risk_distribution: Record<string, number>;
-  dedup_stats: { total_deduped: number; dedup_rate: number };
+  dedup_stats: { total_deduped: number; dedup_rate: number; blocked_last_5m: number };
   recent: Array<{
     task_type: string;
     verdict: string;
@@ -421,6 +421,19 @@ export interface PipelineStatus {
     latency_s: number;
     completed_at: string;
   }>;
+  throughput_series: Array<{ time: string; value: number }>;
+  latency_series: Array<{ time: string; avg_ms: number; p95_ms: number }>;
+  attack_breakdown: Array<{
+    type: string;
+    count: number;
+    avg_risk: number;
+    min_risk: number;
+    max_risk: number;
+    stddev: number;
+    avg_latency_ms: number;
+  }>;
+  recent_errors: Array<{ task_type: string; error: string; created_at: string }>;
+  queue_depth: number;
   timestamp: string;
 }
 

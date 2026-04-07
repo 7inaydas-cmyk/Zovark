@@ -34,6 +34,37 @@
 - RLS migration 065
 - Healer memory limit (512MB)
 
+## Sprint C1: Remediation Engine (2026-04-06)
+- worker/intelligence/remediation.py (22 attack types, circuit breaker, rate limiter)
+- api/remediation_handlers.go (suggest, verify, list, patch)
+- migration 067 (audit event types + kill switch config)
+- 17 unit tests (rules, circuit breaker, rate limiter, stats)
+
+## Detection Calibration (2026-04-06)
+- golden_ticket: 10→91.7 avg (keyword scanning + abnormal lifetime)
+- kerberoasting: 58→94 avg (EncryptionType alias + keyword fallback)
+- ransomware: 60.7→77.5 avg (family name keywords)
+- data_exfil: 51→70 avg (exfil shorthand + DNS tunnel patterns)
+- phishing BEC: 20→90 (executive impersonation + wire transfer)
+
+## Dashboard v1 (2026-04-06)
+- PipelineMonitor.tsx (status bar, metrics, stages, charts, activity log)
+- AnalyticsPanel fixes (top_attacks, computed total, risk_buckets)
+- AlertForge SSE reconnect with backoff + ?token= auth
+- GET /api/v1/admin/pipeline/status endpoint
+
+## Security Hardening (2026-04-06/07)
+- ReDoS: split compound .* regex into independent searches (3.4s→0.22s)
+- ReDoS: 4KB parse guard in parse_windows_event
+- JSON injection: json.Marshal instead of fmt.Sprintf in remediation
+- Info disclosure: generic "not found" errors
+- Red team: 7 E2E bypasses patched (66 content scanner patterns, caret deobfuscation)
+- Bundle test fixes: conftest.py, SyntaxError, SAST allowlist, expiry check
+
+## Benchmark (2026-04-06)
+- 100-alert test: 88% detection, 0% FP, P50=1.98s, P95=8.6s
+- Competitive benchmark doc vs Dropzone AI / Torq HyperSOC
+
 ## Process (2026-04-06)
 - Kanban boards + engineering process
 - Hot cache (Projects/hot.md)

@@ -564,6 +564,140 @@ func handlePipelineStatus(c *gin.Context) {
 		recent = []recentInvestigation{}
 	}
 
+	// --- v2 additions ---
+
+	// Throughput time series (30 min, 1-min buckets)
+	type timeBucket struct {
+		Time  string `json:"time"`
+		Value int    `json:"value"`
+	}
+	var throughputSeries []timeBucket
+	tsRows, tsErr := dbPool.Query(ctx, `
+		SELECT TO_CHAR(date_trunc('minute', completed_at), 'HH24:MI'),
+		       COUNT(*)::int
+		FROM agent_tasks
+		WHERE tenant_id = $1 AND status = 'completed'
+		  AND completed_at > NOW() - INTERVAL '30 minutes'
+		GROUP BY date_trunc('minute', completed_at)
+		ORDER BY date_trunc('minute', completed_at)
+	`, tenantID)
+	if tsErr == nil {
+		defer tsRows.Close()
+		for tsRows.Next() {
+			var tb timeBucket
+			if err := tsRows.Scan(&tb.Time, &tb.Value); err == nil {
+				throughputSeries = append(throughputSeries, tb)
+			}
+		}
+	}
+	if throughputSeries == nil {
+		throughputSeries = []timeBucket{}
+	}
+
+	// Latency time series (30 min, 1-min buckets)
+	type latencyBucket struct {
+		Time  string  `json:"time"`
+		AvgMs float64 `json:"avg_ms"`
+		P95Ms float64 `json:"p95_ms"`
+	}
+	var latencySeries []latencyBucket
+	lsRows, lsErr := dbPool.Query(ctx, `
+		SELECT TO_CHAR(date_trunc('minute', completed_at), 'HH24:MI'),
+		       COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000)), 0),
+		       COALESCE(ROUND(PERCENTILE_CONT(0.95) WITHIN GROUP (ORDER BY EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000)), 0)
+		FROM agent_tasks
+		WHERE tenant_id = $1 AND status = 'completed'
+		  AND completed_at > NOW() - INTERVAL '30 minutes'
+		GROUP BY date_trunc('minute', completed_at)
+		ORDER BY date_trunc('minute', completed_at)
+	`, tenantID)
+	if lsErr == nil {
+		defer lsRows.Close()
+		for lsRows.Next() {
+			var lb latencyBucket
+			if err := lsRows.Scan(&lb.Time, &lb.AvgMs, &lb.P95Ms); err == nil {
+				latencySeries = append(latencySeries, lb)
+			}
+		}
+	}
+	if latencySeries == nil {
+		latencySeries = []latencyBucket{}
+	}
+
+	// Attack breakdown (per-type stats, 30 min)
+	type attackBreakdown struct {
+		Type       string  `json:"type"`
+		Count      int     `json:"count"`
+		AvgRisk    float64 `json:"avg_risk"`
+		MinRisk    int     `json:"min_risk"`
+		MaxRisk    int     `json:"max_risk"`
+		Stddev     float64 `json:"stddev"`
+		AvgLatency float64 `json:"avg_latency_ms"`
+	}
+	var attackTypes []attackBreakdown
+	abRows, abErr := dbPool.Query(ctx, `
+		SELECT task_type,
+		       COUNT(*)::int,
+		       COALESCE(ROUND(AVG((output->>'risk_score')::numeric), 1), 0),
+		       COALESCE(MIN((output->>'risk_score')::int), 0),
+		       COALESCE(MAX((output->>'risk_score')::int), 0),
+		       COALESCE(ROUND(STDDEV((output->>'risk_score')::numeric), 1), 0),
+		       COALESCE(ROUND(AVG(EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000)), 0)
+		FROM agent_tasks
+		WHERE tenant_id = $1 AND status = 'completed'
+		  AND output->>'verdict' != 'benign' AND output->>'risk_score' IS NOT NULL
+		  AND completed_at > NOW() - INTERVAL '30 minutes'
+		GROUP BY task_type ORDER BY 3 DESC
+	`, tenantID)
+	if abErr == nil {
+		defer abRows.Close()
+		for abRows.Next() {
+			var ab attackBreakdown
+			if err := abRows.Scan(&ab.Type, &ab.Count, &ab.AvgRisk, &ab.MinRisk, &ab.MaxRisk, &ab.Stddev, &ab.AvgLatency); err == nil {
+				attackTypes = append(attackTypes, ab)
+			}
+		}
+	}
+	if attackTypes == nil {
+		attackTypes = []attackBreakdown{}
+	}
+
+	// Recent errors (last 5)
+	type recentError struct {
+		TaskType string `json:"task_type"`
+		Error    string `json:"error"`
+		Created  string `json:"created_at"`
+	}
+	var recentErrors []recentError
+	eRows, eErr := dbPool.Query(ctx, `
+		SELECT task_type, COALESCE(error_message, 'Unknown error'), created_at
+		FROM agent_tasks
+		WHERE tenant_id = $1 AND status IN ('error', 'failed')
+		ORDER BY created_at DESC LIMIT 5
+	`, tenantID)
+	if eErr == nil {
+		defer eRows.Close()
+		for eRows.Next() {
+			var re recentError
+			var createdAt time.Time
+			if err := eRows.Scan(&re.TaskType, &re.Error, &createdAt); err == nil {
+				re.Created = createdAt.Format(time.RFC3339)
+				recentErrors = append(recentErrors, re)
+			}
+		}
+	}
+	if recentErrors == nil {
+		recentErrors = []recentError{}
+	}
+
+	// Dedup blocked in last 5m
+	var dedupBlocked5m int
+	if redisClient != nil {
+		// Approximate from total dedup counter vs recent rate
+		dedupBlocked5m, _ = redisClient.Get(ctx, "dedup:stats:deduplicated").Int()
+	}
+	dedupStats["blocked_last_5m"] = dedupBlocked5m
+
 	c.JSON(http.StatusOK, gin.H{
 		"active":              active,
 		"completed":           completed,
@@ -576,6 +710,11 @@ func handlePipelineStatus(c *gin.Context) {
 		"risk_distribution":  riskDist,
 		"dedup_stats":        dedupStats,
 		"recent":             recent,
+		"throughput_series":   throughputSeries,
+		"latency_series":     latencySeries,
+		"attack_breakdown":   attackTypes,
+		"recent_errors":      recentErrors,
+		"queue_depth":        active,
 		"timestamp":          time.Now().UTC().Format(time.RFC3339),
 	})
 }

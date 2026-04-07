@@ -57,6 +57,30 @@
 | Signoz/OTEL | docker compose --profile tracing | Distributed traces, per-stage latency, P95/P99 | Performance optimization |
 | AutoResearch Engine | autoresearch/telemetry_driven/ | 6-module weakness finder + test generator | After ANY change — finds what regression missed |
 | OOB Watchdog | api/oob.go (:9091) | Health endpoint, debug state, Redis counters | Container health, dedup observability |
+| Pipeline Status | api/zvadmin_handlers.go | GET /admin/pipeline/status — active, latency, verdicts, risk, recent | Dashboard, monitoring |
+
+## Dashboard (web-admin)
+| Component | File | What it shows | Data source |
+|-----------|------|--------------|-------------|
+| PipelineMonitor | web-admin/src/components/PipelineMonitor.tsx | Status bar, metrics, stage flow, charts, activity log | GET /admin/pipeline/status |
+| AnalyticsPanel | web-admin/src/components/AnalyticsPanel.tsx | Verdict/risk distribution, attack type bar chart | POST /analytics/summary |
+| AlertForge | web-admin/src/components/AlertForge.tsx | Forge config + PipelineMonitor, SSE progress | POST /admin/forge/start |
+| AdminDashboard | web-admin/src/components/AdminDashboard.tsx | Tab container for zvadmin, forge, analytics | N/A |
+| ZvadminPanel | web-admin/src/components/ZvadminPanel.tsx | Diagnose, config, bootstrap | POST /admin/diagnose |
+
+## Remediation Engine (Sprint C1)
+| Component | File | What it does |
+|-----------|------|-------------|
+| Remediation Rules | worker/intelligence/remediation.py | 22 attack types, circuit breaker, rate limiter |
+| Remediation API | api/remediation_handlers.go | suggest, verify, list, patch (4 endpoints) |
+| Kill Switch | system_configs: remediation.auto_verify_enabled | Default false, controls verification |
+
+## Security (Content Scanner)
+| Component | File | Count | What it does |
+|-----------|------|-------|-------------|
+| Content Scanner | worker/stages/ingest.py:RAW_LOG_ATTACK_PATTERNS | 66 patterns | Overrides benign routing when attack content in raw_log |
+| Caret Deobfuscation | worker/stages/ingest.py:_has_raw_log_attack_content | On ^ detection | Strips CMD caret escapes before pattern matching |
+| Parse Guard | worker/tools/parsing.py:parse_windows_event | 4KB limit | Prevents ReDoS on large payloads |
 
 ## Quality Gates
 | Gate | Command | When to run |
