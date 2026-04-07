@@ -402,6 +402,11 @@ func main() {
 		// Pipeline status — live monitoring
 		adminGroup.GET("/pipeline/status", handlePipelineStatus)
 
+		// License management (Sprint C3)
+		adminGroup.GET("/license/status", handleLicenseStatus)
+		adminGroup.GET("/license/verify", handleLicenseVerify)
+		adminGroup.POST("/license/install", handleLicenseInstall)
+
 		// Alert Forge — synthetic workload generator & benchmark
 		adminGroup.POST("/forge/start", handleForgeStart)
 		adminGroup.GET("/forge/history", handleForgeHistory)

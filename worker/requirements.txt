@@ -8,6 +8,8 @@ pyyaml
 asyncpg>=0.29.0
 zstandard>=0.21.0
 scikit-learn>=1.3.0
+# Ed25519 signature verification for license enforcement
+cryptography>=42.0.0
 # Pydantic Settings — centralized config
 pydantic-settings>=2.0
 # OpenTelemetry tracing (optional — gracefully degrades if missing)
