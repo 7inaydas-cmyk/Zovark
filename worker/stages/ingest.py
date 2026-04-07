@@ -155,6 +155,11 @@ RAW_LOG_ATTACK_PATTERNS = [
     r'(?i)(?:svchost\d|csrss\d|lsass\d|explorer\d)\w*\.exe',
     # Hidden window + outbound connection (process hollowing indicator)
     r'(?i)Window=hidden.*(?:Connecting|TCP|UDP)',
+    # --- Reverse shell / dropper patterns (broader than lines 117-118 which require http after curl) ---
+    r'(?i)curl\s+[^\n]*\|\s*(?:ba)?sh',
+    r'(?i)wget\s+[^\n]*\|\s*(?:ba)?sh',
+    r'(?i)curl\s+[^\n]*-o\s+/tmp/',
+    r'(?i)python\s+-c\s+["\']import\s+(?:socket|subprocess|os)',
 ]
 
 
