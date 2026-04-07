@@ -342,6 +342,12 @@ func main() {
 		api.GET("/remediation/actions", listRemediationActionsHandler)
 		api.PATCH("/remediation/actions/:id", requireRole("admin", "analyst"), updateRemediationActionHandler)
 
+		// Copilot API (Sprint C2) — analyst + admin
+		api.POST("/copilot/explain", requireRole("admin", "analyst"), handleCopilotExplain)
+		api.POST("/copilot/suggest", requireRole("admin", "analyst"), handleCopilotSuggest)
+		api.POST("/copilot/correlate", requireRole("admin", "analyst"), handleCopilotCorrelate)
+		api.POST("/copilot/brief", requireRole("admin", "analyst"), handleCopilotBrief)
+
 		// Analytics summary (analysts + admins)
 		api.POST("/analytics/summary", requireRole("admin", "analyst"), handleAnalyticsSummary)
 	}
