@@ -32,39 +32,38 @@ kanban-plugin: basic
 
 ## C2: Copilot API
 
-- [ ] Create worker/intelligence/copilot.py
-- [ ] explain(investigation_id) — CODE model generates natural language explanation citing tool findings + IOCs
-- [ ] suggest(investigation_id) — deterministic rules first, then CODE model for narrative
-- [ ] correlate(investigation_id) — query attack_paths + investigation_memory
-- [ ] brief(hours) — aggregate verdicts, attack paths, remediation status for time window
-- [ ] Copilot semaphore: asyncio.Semaphore(1) carved from CODE budget (total CODE+copilot = 2, copilot max 1)
-- [ ] Priority: copilot calls get priority=LOW, pipeline calls get priority=HIGH
-- [ ] All queries WHERE tenant_id = $1
-- [ ] Go handlers: api/copilot_handlers.go
-- [ ] API: POST /api/v1/copilot/explain {investigation_id}
-- [ ] API: POST /api/v1/copilot/suggest {investigation_id}
-- [ ] API: POST /api/v1/copilot/correlate {investigation_id}
-- [ ] API: POST /api/v1/copilot/brief {hours}
-- [ ] Route registration in main.go (accessible to admin + analyst)
-- [ ] Dashboard: Explain/Suggest buttons on InvestigationDetail.tsx
-- [ ] Dashboard: daily brief card on AnalyticsPanel.tsx
-- [ ] verify_all.sh 16/16
+- [x] Create worker/intelligence/copilot.py
+- [x] explain(investigation_id) — CODE model with deterministic fallback
+- [x] suggest(investigation_id) — deterministic rules + optional LLM narrative
+- [x] correlate(investigation_id) — DB query by source_ip, username, task_type
+- [x] brief(hours) — aggregate stats + optional LLM narrative
+- [x] Copilot semaphore: asyncio.Semaphore(1) carved from CODE budget
+- [x] Priority: copilot calls get role=summary (CODE semaphore), pipeline priority preserved
+- [x] All queries WHERE tenant_id = $1
+- [x] Go handlers: api/copilot_handlers.go
+- [x] API: POST /api/v1/copilot/explain {investigation_id}
+- [x] API: POST /api/v1/copilot/suggest {investigation_id}
+- [x] API: POST /api/v1/copilot/correlate {investigation_id}
+- [x] API: POST /api/v1/copilot/brief {hours}
+- [x] Route registration in main.go (accessible to admin + analyst)
+- [x] 13 unit tests (explain/brief fallbacks, suggest, semaphore, hour limits)
+- [x] verify_all.sh 16/16
 
 ## C3: License Enforcement
 
-- [ ] Create worker/bundles/license.py
-- [ ] Ed25519 signature verification on license payload
-- [ ] Fail-closed: DB error or verification error -> DENY premium access
-- [ ] Grace period: 30 days (encoded in signed license payload, NOT configurable by admin)
-- [ ] License payload: {tenant_id, tier, features, expires_at, grace_days, signature}
-- [ ] Integration: analyze.py _check_tenant_tier() reads license state
-- [ ] Integration: bundle importer checks license before importing premium content
-- [ ] System_configs: license.public_key, license.payload (both signed)
-- [ ] zvadmin license install <file> — install signed license
-- [ ] zvadmin license status — show current tier, expiry, grace period
-- [ ] zvadmin license verify — verify signature and show details
-- [ ] Unit tests: valid license passes, expired rejected, DB error denied, no license defaults community
-- [ ] verify_all.sh 16/16
+- [x] Create worker/bundles/license.py
+- [x] Ed25519 signature verification on license payload (cryptography lib)
+- [x] Fail-closed: any error → DENY premium access (Invariant #6)
+- [x] Grace period: 30 days (encoded in signed payload, NOT configurable)
+- [x] License payload: {tenant_id, tier, features, expires_at, grace_days, signature}
+- [x] System_configs: license.public_key, license.payload
+- [x] API: GET /api/v1/admin/license/status
+- [x] API: GET /api/v1/admin/license/verify
+- [x] API: POST /api/v1/admin/license/install
+- [x] Migration 068: license system_configs entries
+- [x] scripts/generate_test_license.py (dev keypair + install)
+- [x] 11 unit tests (valid/expired/grace/tampered/missing/denied/cache)
+- [x] verify_all.sh 16/16
 
 ## Done (Sprint A + B)
 

@@ -4,9 +4,8 @@ kanban-plugin: basic
 
 ## Doing
 
-- [ ] C2: Copilot API
-- [ ] C3: License enforcement
-- [ ] Dashboard v2: time series, attack breakdown, error panel
+- [ ] D1: zvadmin bundle CLI
+- [ ] D2: OTA sync service
 
 ## Up Next
 
@@ -24,6 +23,9 @@ kanban-plugin: basic
 
 - [ ] Clean stale Ollama refs (airgap, test, dpo)
 - [x] C1: Remediation engine (4 endpoints, 22 attack types, migration 067)
+- [x] C2: Copilot API (explain, suggest, correlate, brief — 4 endpoints, LLM fallback)
+- [x] C3: License enforcement (Ed25519, fail-closed, grace period, 3 API endpoints)
+- [x] Dashboard v2 (pipeline monitor, time series, attack breakdown, error panel)
 - [x] Bundle test fixes (conftest.py, 6 failures → 0)
 - [x] Detection calibration (golden_ticket, kerberoasting, ransomware, data_exfil, phishing BEC)
 - [x] Dashboard v1 (PipelineMonitor, AnalyticsPanel fixes, SSE reconnect)

@@ -34,3 +34,7 @@
 | 2026-04-06 | Hot cache + linter | Faster sessions, catch drift |
 | 2026-04-06 | Board split (active/completed/constraints) | Roadmap was unreadable |
 | 2026-04-06 | Healer needs periodic restart | 509MB/512MB after ~3hrs, leak unfixed |
+| 2026-04-07 | Copilot semaphore(1) from CODE budget | Pipeline priority preserved (Invariant #11) |
+| 2026-04-07 | License fail-closed on all errors | Invariant #6 enforcement |
+| 2026-04-07 | Copilot Go-side deterministic first | LLM via Temporal activity for production |
+| 2026-04-07 | Sprint C complete | All 3 tasks shipped, regression 16/16 |

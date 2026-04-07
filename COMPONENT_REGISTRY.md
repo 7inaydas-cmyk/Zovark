@@ -75,6 +75,20 @@
 | Remediation API | api/remediation_handlers.go | suggest, verify, list, patch (4 endpoints) |
 | Kill Switch | system_configs: remediation.auto_verify_enabled | Default false, controls verification |
 
+## Copilot (Sprint C2)
+| Component | File | What it does |
+|-----------|------|-------------|
+| Copilot Engine | worker/intelligence/copilot.py | explain, suggest, correlate, brief with LLM fallback |
+| Copilot API | api/copilot_handlers.go | 4 endpoints (explain, suggest, correlate, brief) |
+| Copilot Semaphore | worker/intelligence/copilot.py:_copilot_semaphore | Semaphore(1) from CODE budget |
+
+## License (Sprint C3)
+| Component | File | What it does |
+|-----------|------|-------------|
+| License Verifier | worker/bundles/license.py | Ed25519 verify, fail-closed, 5-min cache |
+| License API | api/license_handlers.go | status, verify, install (admin only) |
+| License Generator | scripts/generate_test_license.py | Dev keypair + payload generator |
+
 ## Security (Content Scanner)
 | Component | File | Count | What it does |
 |-----------|------|-------|-------------|

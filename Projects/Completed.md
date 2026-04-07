@@ -34,6 +34,20 @@
 - RLS migration 065
 - Healer memory limit (512MB)
 
+## Sprint C2: Copilot API (2026-04-07)
+- worker/intelligence/copilot.py (explain, suggest, correlate, brief)
+- asyncio.Semaphore(1) for copilot LLM calls (Invariant #11)
+- Deterministic fallback on LLM timeout/failure
+- api/copilot_handlers.go (4 endpoints)
+- 13 unit tests
+
+## Sprint C3: License Enforcement (2026-04-07)
+- worker/bundles/license.py (Ed25519, fail-closed, grace period, 5-min cache)
+- api/license_handlers.go (status, verify, install)
+- migration 068 (license system_configs)
+- scripts/generate_test_license.py
+- 11 unit tests
+
 ## Sprint C1: Remediation Engine (2026-04-06)
 - worker/intelligence/remediation.py (22 attack types, circuit breaker, rate limiter)
 - api/remediation_handlers.go (suggest, verify, list, patch)

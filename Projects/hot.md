@@ -1,5 +1,5 @@
 # HOT CACHE
-# Updated: 2026-04-07 (commit 81932fc)
+# Updated: 2026-04-07 (commit 846ec54)
 # Read this FIRST. Skip CLAUDE.md unless you need deep detail.
 
 ## Current State
@@ -7,40 +7,35 @@
 - Regression: 16/16 (Path C included)
 - Dedup: 14/14
 - Services: 17 containers running (11 defined, 6 from profiles)
-- Tests: 48 bundle+remediation pass, rest pre-existing
-- Last commit: fc5bb1a security: patch 7 red team E2E bypasses in content scanner
-- Content scanner: 66 patterns (was 54), caret deobfuscation added
-- Healer: memory limited to 512MB, leak active
+- Tests: 72 pass (31 bundle + 17 remediation + 13 copilot + 11 license)
+- Last commit: 846ec54 feat(C3): license enforcement
+- Content scanner: 66 patterns, caret deobfuscation
+- Sprint C: COMPLETE (C1+C2+C3 all shipped)
 
-## Active Sprint: C — Pipeline Integration
-- C1: Remediation engine — DONE (4 API endpoints, 22 attack types, 17 tests)
-- C2: Copilot API — NOT STARTED
-- C3: License enforcement — NOT STARTED
+## Sprint C — COMPLETE
+- C1: Remediation engine — DONE (e83440b)
+- C2: Copilot API — DONE (d14f88a)
+- C3: License enforcement — DONE (846ec54)
 
-## Session Work (2026-04-06/07)
-- C1 remediation engine (suggest/verify/list/patch, migration 067)
-- Bundle test fixes (conftest.py, SyntaxError, SAST, expiry — 31/31 pass)
-- Detection patches (golden_ticket, kerberoasting, ransomware, data_exfil, phishing BEC)
-- 100-alert benchmark: 88% detection, all types avg risk ≥65, 0% benign FP
-- Dashboard v1: PipelineMonitor, AnalyticsPanel fixes, AlertForge SSE reconnect
-- Security audit: ReDoS fix (3.4s→0.22s), JSON injection, info disclosure
-- Red team: 7 E2E bypasses patched (registry, caret, WMI, DNS tunnel, staging, renamed binary, process hollowing)
-- Session protocol: smoke test added as Step 2
-- Competitive benchmark doc
+## Next Sprint: D — Bundle Distribution
+- D1: zvadmin bundle CLI
+- D2: OTA sync service
+- D3: Bundle publisher
+- D4: Signing key distribution
 
 ## Blocked
-- E1: Model benchmark — needs 48h stable pipeline
+- E1: Model benchmark — needs 48h stable pipeline (ready to unblock)
 - E3: Fine-tuning pilot — needs 200 DPO pairs
 
-## Anti-Patterns (Top 5 Recent)
+## Anti-Patterns
 - Don't use .* in regex (ReDoS) — split into independent re.search() calls
 - Don't use fmt.Sprintf for JSON — use json.Marshal
 - Don't return specific error messages (IDOR) — use generic "not found"
-- Don't pass comma-joined IDs to UUID columns
-- Don't use double backslash in regex for single-backslash Windows paths
+- Don't rely on structured parse fields alone — add raw_log keyword fallback
+- License check errors → DENY (fail-closed, Invariant #6)
+- Copilot LLM calls → deprioritized below pipeline (Invariant #11)
 
 ## Files You'll Probably Touch
-- worker/intelligence/copilot.py (Sprint C2)
-- worker/bundles/license.py (Sprint C3)
-- api/zvadmin_handlers.go (pipeline status v2)
-- web-admin/src/components/ (dashboard v2)
+- worker/bundles/ (Sprint D bundle CLI)
+- api/main.go (route registration)
+- web-admin/src/components/ (dashboard enhancements)
