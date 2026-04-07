@@ -1,4 +1,4 @@
-# Zovark v3.2.1 — AI-to-AI Handover Guide
+# Zovark v3.3-dev — AI-to-AI Handover Guide
 
 > Read this BEFORE reading CLAUDE.md. Read this BEFORE writing any code.
 > This is the "how to work here" guide. CLAUDE.md is the "what exists" reference.

@@ -1,4 +1,4 @@
-# Zovark v3.2.1 — Autonomous AI SOC Agent
+# Zovark v3.3-dev — Autonomous AI SOC Agent
 
 > **Engineering Discipline:** All Claude Code sessions must follow `ENGINEERING_DISCIPLINE.md`.
 > Load it at session start. Use slash commands for all work.
@@ -12,19 +12,19 @@
 | Field | Value |
 |-------|-------|
 | Version | v3.2.1 tagged on master, v3.3-dev active |
-| Date | 2026-04-06 |
-| Status | Production-ready — 40 tools, 24 plans, 100% detection, investigation-aware dedup, SIEM push-back, Valkey cache |
+| Date | 2026-04-07 |
+| Status | Sprint C complete — 40 tools, 24 plans, 100% detection, copilot API, license enforcement, remediation engine, dashboard v2 |
 | Stack | Go API + Python Temporal Worker + React Dashboard + PostgreSQL/pgvector + Valkey (BSD) + LLM inference |
 | Models | Gemma 4 E4B Q4_K_M (dev, both roles, --ctx-size 4096). Customer: same FAST + bigger CODE model (8B/13B/70B). |
 | LLM Host | llama-server (llama.cpp) in container `zovark-inference`. No litellm. Singleton httpx client with dual semaphores (FAST/CODE). |
 | Pipeline | V3 6-stage — deterministic tools + governance layer (v2 sandbox behind feature flag) |
 | Tools | 40 investigation tools (7 categories) + 24 saved investigation plans |
 | Templates | 25 active (12 hand-written + 2 flywheel + 10 AutoResearch + 1 quorum-promoted) |
-| Tests | 535 unit + 14 integration + 515-alert corpus |
+| Tests | 72 unit (bundle+remediation+copilot+license) + 14 integration + 515-alert corpus |
 | Services | 11 core Docker containers + optional profiles (tracing, monitoring, siem-lab, etc.) + zvadmin host CLI |
-| Dashboard | React 19 + TypeScript + Vite 7 + Tailwind 4, 17 pages, SOC War Room design |
-| Database | PostgreSQL 16 + pgvector, 86+ tables, 64 migrations, RLS on 10 tables |
-| Concurrency | 16 concurrent activities, 32 concurrent workflows, Semaphore(2) on LLM calls |
+| Dashboard | React 19 + TypeScript + Vite 7 + Tailwind 4 — Analytics, Alert Forge, Pipeline Monitor, System Health, Zvadmin |
+| Database | PostgreSQL 16 + pgvector, 86+ tables, 68 migrations, RLS on 10 tables |
+| Concurrency | 16 concurrent activities, 32 concurrent workflows, Semaphore(2) on LLM calls + Semaphore(1) copilot |
 | Feature Flag | `ZOVARK_EXECUTION_MODE=tools` (v3, default) or `sandbox` (v2 legacy) |
 | Observability | OpenTelemetry → Signoz (self-hosted ClickHouse). `docker compose --profile tracing up -d` |
 | Config | Pydantic Settings (`worker/settings.py`), SecretStr credentials, .env support |
@@ -34,7 +34,7 @@
 | File | Purpose |
 |------|---------|
 | `Projects/Zovark_Roadmap.md` | Master Kanban board — all sprints, decisions, constraints |
-| `Projects/Sprint_C_Pipeline.md` | Current sprint detail — C1/C2/C3 tasks |
+| `Projects/Sprint_C_Pipeline.md` | Sprint C detail — C1/C2/C3 ALL COMPLETE |
 | `Projects/ENGINEERING_PROCESS.md` | How we ship — commit format, anti-patterns, quality gates |
 | `Projects/SESSION_PROTOCOL.md` | Session start/end checklist + report template |
 | `Projects/claude_project_mgmt.md` | Quick reference for all project files |
@@ -219,6 +219,25 @@ Dual-endpoint opt-in via `ZOVARK_LLM_ENDPOINT_FAST` and `ZOVARK_LLM_ENDPOINT_COD
 | `config/signoz/clickhouse-cluster.xml` | Single-node ClickHouse with built-in Keeper for Signoz |
 | `config/signoz/frontend-nginx.conf` | Nginx proxy — prefix match for /api/* to query service |
 | `dashboard/src/components/LiveInvestigationFeed.tsx` | Real-time SSE event feed — tool progress, IOC discovery, verdict reveal |
+
+### Sprint C: Copilot + License + Remediation (2026-04-06/07)
+
+| File | Purpose |
+|------|---------|
+| `worker/intelligence/copilot.py` | Copilot API: explain, suggest, correlate, brief with Semaphore(1) LLM fallback |
+| `worker/intelligence/remediation.py` | Remediation engine: 22 attack type rules, circuit breaker, rate limiter, kill switch |
+| `worker/bundles/license.py` | License enforcement: Ed25519 verify, fail-closed, grace period, 5-min cache |
+| `api/copilot_handlers.go` | 4 copilot endpoints (explain, suggest, correlate, brief) |
+| `api/remediation_handlers.go` | 4 remediation endpoints (suggest, verify, list, patch) |
+| `api/license_handlers.go` | 3 license endpoints (status, verify, install) |
+| `migrations/067_remediation_audit_events.sql` | Remediation audit event types + kill switch config |
+| `migrations/068_license_system_configs.sql` | License public_key + payload in system_configs |
+| `scripts/generate_test_license.py` | Dev Ed25519 keypair + test license generator |
+| `web-admin/src/components/PipelineMonitor.tsx` | Live pipeline dashboard: metrics, stage flow, sparklines, attack breakdown, activity log |
+| `web-admin/src/components/AnalyticsPanel.tsx` | Analytics: verdict/risk charts, time series, attack type detail table |
+| `web-admin/src/components/AlertForge.tsx` | Alert forge with integrated PipelineMonitor, SSE reconnect |
+| `docs/PRODUCT_GUIDE.md` | Complete product documentation (architecture, capabilities, API reference, credentials) |
+| `docs/COMPETITIVE_BENCHMARK_v3.3.md` | Speed/accuracy comparison vs Dropzone AI / Torq HyperSOC |
 
 ### Worker Pipeline (Python)
 
@@ -695,6 +714,14 @@ curl -s http://localhost:8090/api/v1/tasks/<TASK_ID> -H "Authorization: Bearer $
 | **3E** | **v3.1-hardening -- Pydantic Settings (SecretStr, .env), LLM output validation (schemas.py), singleton LLM client (Semaphore(2)), streaming waterfall (events.py → SSE → React), Signoz observability (ClickHouse-backed), Code Graph RAG MCP** |
 | **3F** | **Healer v1.1 -- ZOVARK_ env prefix alignment, Signoz health checks (OTEL-gated), check_tcp(), LLM_HOST configurable, seed_alerts.sh** |
 | **3G** | **v3.2.1 -- Pipeline calibration (kerberoasting/dns_exfil), investigation-aware dedup, batch severity promotion, SIEM verdict push-back, Valkey swap, license compliance, zvadmin telemetry CLI (5 commands), telemetry-driven AutoResearch engine** |
+| **Sprint A** | **Bundle Foundation -- migration 066 (11 tables, RLS), bundle schema (Pydantic, Ed25519), 3-phase SAST+DAST security gates, atomic importer (semver, rollback), 25 unit tests** |
+| **Sprint B** | **Intelligence Layer -- dynamic plan loading in analyze.py, attack path correlator (5 rules, DLQ), contextual risk scoring (0.72x-1.87x), store NOTIFY trigger** |
+| **Sprint C1** | **Remediation Engine -- 22 attack type deterministic rules, circuit breaker (3/type/24h), rate limiter (10/hr), kill switch, 4 API endpoints, migration 067, 17 unit tests** |
+| **Sprint C2** | **Copilot API -- explain/suggest/correlate/brief, asyncio.Semaphore(1) from CODE budget, LLM fallback to deterministic templates, 4 Go endpoints, 13 unit tests** |
+| **Sprint C3** | **License Enforcement -- Ed25519 signature verification, fail-closed (Invariant #6), grace period from signed payload, 5-min cache, 3 API endpoints, migration 068, 11 unit tests** |
+| **Dashboard v2** | **PipelineMonitor (status bar, 6 metrics, stage flow, sparklines, attack breakdown, activity log, error panel), AnalyticsPanel (time series, attack detail table), AlertForge (SSE reconnect, integrated monitor)** |
+| **Security** | **Red team v3: 7 E2E bypasses patched (66 content scanner patterns, caret deobfuscation). ReDoS fixes (3.4s→0.22s parse guard). JSON injection → json.Marshal. Info disclosure → generic errors.** |
+| **Detection** | **Keyword fallback patterns for golden_ticket (91.7), kerberoasting (94.0), phishing BEC (86.7), ransomware (77.5), data_exfil (70.0). EncryptionType alias. 100-alert benchmark: 88% detection, 0% FP.** |
 
 ---
 
@@ -1037,18 +1064,34 @@ Tracks 3-6 (templates, tool hardening, benchmarks, tests) now operational with d
 
 ## Pending Work
 
-1. **PgBouncer zovark_app switch** — Migration 065 applied, PgBouncer config + worker credential switch pending
-2. **Healthcare template pack** — 30 industry-specific templates (HIPAA, infrastructure, compliance)
-3. **A100 benchmark** — Rerun with parallel workers on GPU hardware
-4. **Customer tier dual-inference test** — Separate FAST/CODE containers on real GPU
-5. **Blue/green deployment** — Zero-downtime updates with auto-rollback (config drafted, needs staging)
-6. **Healer memory leak root cause** — Mitigated by 512MB limit, not fixed
-7. **Merge v3.3-dev to master** — Quick wins done, ready for merge
-8. **Intelligence Layer PRD** — Multi-model architecture, attack paths, contextual risk, copilot (see docs/PRD_INTELLIGENCE_LAYER_ADDENDUM.md)
+1. **Sprint D: Bundle Distribution** — D1 zvadmin bundle CLI, D2 OTA sync, D3 bundle publisher, D4 signing key distribution
+2. **Analyst feedback system** — thumbs up/down on verdicts, accuracy tracking, per-type stats
+3. **SIEM connector framework** — Splunk, Elastic, Syslog, Webhook, Sentinel normalization
+4. **Multi-worker horizontal scaling** — Temporal multi-worker config + scale test script
+5. **E1 model benchmark** — Pipeline stable 48h+, ready to unblock
+6. **PgBouncer zovark_app switch** — Migration 065 applied, config pending
+7. **Healthcare template pack** — 30 industry-specific templates
+8. **Healer memory leak root cause** — Mitigated by 512MB limit, not fixed
+9. **Merge v3.3-dev to master** — Sprint C complete, ready for merge
+10. **Copilot dashboard integration** — Explain/Suggest buttons on investigation detail, Shift Brief on analytics
 
 ---
 
-## What Was Built — v3.3-dev Session (April 6, 2026)
+## What Was Built — Sprint C Session (April 6-7, 2026)
+
+### Sprint C: Complete Pipeline Integration
+1. **C1: Remediation Engine** — 22 attack types, circuit breaker (3/type/24h), rate limiter (10/hr), kill switch, 4 API endpoints (suggest/verify/list/patch), migration 067, 17 unit tests
+2. **C2: Copilot API** — explain/suggest/correlate/brief, asyncio.Semaphore(1) carved from CODE budget (Invariant #11), deterministic fallback on LLM failure, 4 Go endpoints, 13 unit tests
+3. **C3: License Enforcement** — Ed25519 verify via cryptography lib, fail-closed on ALL errors (Invariant #6), 30-day grace from signed payload, 5-min DB cache, 3 API endpoints (status/verify/install), migration 068, 11 unit tests
+4. **Bundle test fixes** — conftest.py for container imports, SyntaxError in importer.py, SAST allowlist for urllib.parse, expiry check exception bug — 31/31 bundle tests pass
+5. **Detection calibration** — golden_ticket (10→91.7), kerberoasting (58→94), ransomware (60.7→77.5), data_exfil (51→70), phishing BEC (20→90) — keyword fallback + EncryptionType alias
+6. **Dashboard v2** — PipelineMonitor (status bar, 6 metrics, stage flow, sparklines, attack breakdown, error panel), AnalyticsPanel (time series, attack detail table), AlertForge SSE reconnect
+7. **Security hardening** — ReDoS fix (3.4s→0.22s), JSON injection → json.Marshal, info disclosure → generic errors, 4KB parse guard in parsing.py
+8. **Red team v3** — 7 E2E bypasses patched, 66 content scanner patterns (was 54), caret deobfuscation, WMI subscription, DNS tunneling, data staging, registry fix
+9. **100-alert benchmark** — 88% detection, all types avg risk ≥65, 0% benign FP, P50=1.98s, avg=2.6s, P95=8.6s, ~40/min throughput
+10. **Documentation** — PRODUCT_GUIDE.md, COMPETITIVE_BENCHMARK_v3.3.md, all project tracking files updated, session protocol smoke test
+
+### Quick Wins (April 5-6, 2026)
 
 ### Quick Wins (4 items from priority queue)
 1. **Path C regression coverage** — Added `unusual_network_traffic` alert (11th attack) to verify_all.sh. Forces LLM tool selection (Path C). Regression is now 16/16 (11 attacks + 5 benign). Zero Path C coverage → full coverage.
