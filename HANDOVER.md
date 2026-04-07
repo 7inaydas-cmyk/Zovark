@@ -16,7 +16,7 @@ Air-gapped SOC investigation platform. Receives SIEM alerts, runs deterministic 
 Alert → API (:8090) → Temporal → Ingest → Analyze → Execute → Assess → Govern → Store → Verdict
 ```
 
-**Stack:** Go API + Python Temporal Worker + React Dashboard + PostgreSQL/pgvector + Valkey + llama-server (Nemotron-Mini-4B)
+**Stack:** Go API + Python Temporal Worker + React Dashboard + PostgreSQL/pgvector + Valkey + llama-server (Gemma 4 E4B Q4_K_M)
 
 ---
 
@@ -83,7 +83,7 @@ When the LLM is unavailable: Path A (saved plans) + benign routing continue norm
 # 1. Start core services
 docker compose up -d
 
-# 2. Start inference (llama-server + Nemotron-Mini-4B)
+# 2. Start inference (llama-server + Gemma 4 E4B)
 docker compose -f docker-compose.yml -f docker-compose.distroless.yml up -d zovark-inference
 
 # 3. Wait ~60s for model load, then verify

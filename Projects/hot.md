@@ -1,5 +1,5 @@
 # HOT CACHE
-# Updated: 2026-04-07 (commit fc5bb1a)
+# Updated: 2026-04-07 (commit 81932fc)
 # Read this FIRST. Skip CLAUDE.md unless you need deep detail.
 
 ## Current State
