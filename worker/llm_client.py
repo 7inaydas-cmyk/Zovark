@@ -26,9 +26,20 @@ try:
 except ImportError:
     _BASE_URL = os.environ.get("ZOVARK_LLM_BASE_URL", "http://zovark-inference:8080")
 
-_client: httpx.AsyncClient | None = None
+# Dual-endpoint support: separate FAST and CODE base URLs
+_FAST_BASE_URL = os.environ.get("ZOVARK_LLM_ENDPOINT_FAST", "").replace("/v1/chat/completions", "").rstrip("/") or _BASE_URL
+_CODE_BASE_URL = os.environ.get("ZOVARK_LLM_ENDPOINT_CODE", "").replace("/v1/chat/completions", "").rstrip("/") or _BASE_URL
+_IS_SPLIT_ENDPOINT = _FAST_BASE_URL != _CODE_BASE_URL
+
+# Client pool keyed by base URL
+_clients: dict[str, httpx.AsyncClient] = {}
 _fast_semaphore = asyncio.Semaphore(1)  # FAST role: tool selection, param fill
 _code_semaphore = asyncio.Semaphore(1)  # CODE role: assessment, summary
+
+# Health state for graceful degradation
+_code_endpoint_healthy = True
+_code_health_failures = 0
+_CODE_FAILURE_THRESHOLD = 3  # Fall back to FAST after N consecutive failures
 
 # Per-role sampling configs (Agent 4)
 SAMPLING_CONFIGS = {
@@ -80,20 +91,20 @@ def _sanitize_llm_output(text: str) -> str:
     return cleaned
 
 
-def get_client() -> httpx.AsyncClient:
-    """Get or create the singleton httpx.AsyncClient."""
-    global _client
-    if _client is None or _client.is_closed:
-        _client = httpx.AsyncClient(
-            base_url=_BASE_URL,
-            timeout=httpx.Timeout(
-                connect=5.0,
-                read=120.0,
-                write=5.0,
-                pool=10.0,
-            ),
-        )
-    return _client
+def _make_client(base_url: str) -> httpx.AsyncClient:
+    return httpx.AsyncClient(
+        base_url=base_url,
+        timeout=httpx.Timeout(connect=5.0, read=120.0, write=5.0, pool=10.0),
+    )
+
+
+def get_client(base_url: str | None = None) -> httpx.AsyncClient:
+    """Get or create an httpx.AsyncClient for the given base URL."""
+    url = base_url or _BASE_URL
+    existing = _clients.get(url)
+    if existing is None or existing.is_closed:
+        _clients[url] = _make_client(url)
+    return _clients[url]
 
 
 async def llm_request(
@@ -115,15 +126,25 @@ async def llm_request(
 
     Returns the raw response JSON from the /v1/chat/completions endpoint.
     """
-    # Select semaphore based on role
+    global _code_endpoint_healthy, _code_health_failures
+
+    # Select semaphore and endpoint based on role
     is_code_role = role in ("verdict", "summary")
     sem = _code_semaphore if is_code_role else _fast_semaphore
+
+    # Endpoint routing: CODE roles use CODE endpoint, FAST roles use FAST
+    if is_code_role and _IS_SPLIT_ENDPOINT and _code_endpoint_healthy:
+        target_base = _CODE_BASE_URL
+    else:
+        target_base = _FAST_BASE_URL
+        if is_code_role and _IS_SPLIT_ENDPOINT and not _code_endpoint_healthy:
+            logger.warning(f"CODE endpoint degraded — falling back to FAST for {role}")
 
     # Merge role-based sampling config
     sampling = SAMPLING_CONFIGS.get(role, SAMPLING_CONFIGS["tool_select"])
 
     async with sem:
-        client = get_client()
+        client = get_client(target_base)
         start = time.perf_counter()
         body = {
             "model": model,
@@ -172,7 +193,12 @@ async def llm_request(
             sanitized = _sanitize_llm_output(raw_content)
             result["choices"][0]["message"]["content"] = sanitized
 
-            logger.info(f"LLM {model} [{stage}/{role}] {duration}s tokens={tokens_in}/{tokens_out}")
+            logger.info(f"LLM {model} [{stage}/{role}] {duration}s tokens={tokens_in}/{tokens_out} endpoint={target_base}")
+
+            # Reset CODE health on success
+            if is_code_role and _IS_SPLIT_ENDPOINT and target_base == _CODE_BASE_URL:
+                _code_endpoint_healthy = True
+                _code_health_failures = 0
 
             if _span:
                 try:
@@ -188,7 +214,13 @@ async def llm_request(
 
         except httpx.TimeoutException as e:
             duration = round(time.perf_counter() - start, 2)
-            logger.error(f"LLM {model} [{stage}/{role}] timed out after {duration}s")
+            logger.error(f"LLM {model} [{stage}/{role}] timed out after {duration}s endpoint={target_base}")
+            # Track CODE endpoint failures for graceful degradation
+            if is_code_role and _IS_SPLIT_ENDPOINT and target_base == _CODE_BASE_URL:
+                _code_health_failures += 1
+                if _code_health_failures >= _CODE_FAILURE_THRESHOLD:
+                    _code_endpoint_healthy = False
+                    logger.warning(f"CODE endpoint marked unhealthy after {_code_health_failures} failures — degrading to FAST")
             if _span:
                 try:
                     _span.set_attribute("llm.success", False)
@@ -212,8 +244,41 @@ async def llm_request(
 
 
 async def close_client():
-    """Close the singleton client (call on shutdown)."""
-    global _client
-    if _client and not _client.is_closed:
-        await _client.aclose()
-        _client = None
+    """Close all clients (call on shutdown)."""
+    for url, client in list(_clients.items()):
+        if client and not client.is_closed:
+            await client.aclose()
+    _clients.clear()
+
+
+async def check_endpoint_health():
+    """Check LLM endpoint health on startup. Log status for each endpoint."""
+    global _code_endpoint_healthy, _code_health_failures
+
+    endpoints = [("FAST", _FAST_BASE_URL)]
+    if _IS_SPLIT_ENDPOINT:
+        endpoints.append(("CODE", _CODE_BASE_URL))
+    else:
+        logger.info(f"LLM endpoints: FAST=CODE={_FAST_BASE_URL} (single endpoint mode)")
+
+    for label, base_url in endpoints:
+        try:
+            async with httpx.AsyncClient(timeout=httpx.Timeout(connect=5.0, read=10.0)) as c:
+                # Try /health (llama.cpp) then /v1/models (OpenAI compat)
+                for path in ["/health", "/v1/models"]:
+                    try:
+                        resp = await c.get(f"{base_url}{path}")
+                        if resp.status_code == 200:
+                            logger.info(f"LLM {label} endpoint healthy: {base_url} ({path})")
+                            break
+                    except Exception:
+                        continue
+                else:
+                    logger.warning(f"LLM {label} endpoint unreachable: {base_url}")
+                    if label == "CODE":
+                        _code_endpoint_healthy = False
+                        logger.warning("CODE endpoint down on startup — will use FAST for all roles")
+        except Exception as e:
+            logger.warning(f"LLM {label} health check failed: {e}")
+            if label == "CODE":
+                _code_endpoint_healthy = False

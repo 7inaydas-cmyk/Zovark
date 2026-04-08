@@ -303,7 +303,9 @@ services:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - HTTP_PROXY=http://squid-proxy:3128
       - HTTPS_PROXY=http://squid-proxy:3128
-      - NO_PROXY=postgres,redis,temporal,minio,nats,embedding-server,localhost,zovark-api,pgbouncer,host.docker.internal,api,docker-socket-proxy,zovark-signoz-collector,zovark-clickhouse
+      - NO_PROXY=postgres,redis,temporal,minio,nats,embedding-server,localhost,zovark-api,pgbouncer,host.docker.internal,api,docker-socket-proxy,zovark-signoz-collector,zovark-clickhouse,zovark-inference,rog-inference
+    extra_hosts:
+      - "rog-inference:${ROG_INFERENCE_IP:-100.100.79.83}"
     volumes:
       - ./sandbox:/app/sandbox:ro
       - ./data/bootstrap:/app/bootstrap_data:ro
