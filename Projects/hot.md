@@ -1,34 +1,55 @@
 # HOT CACHE
-# Updated: 2026-04-08 (commit 68751d8)
+# Updated: 2026-04-09 (commit 134a045)
 # Read this FIRST. Skip CLAUDE.md unless you need deep detail.
 
 ## Current State
 - Branch: v3.3-dev
 - Regression: 16/16 (Path C included)
 - Dedup: 14/14
-- Services: 17 containers running (11 defined, 6 from profiles)
-- Tests: 72 pass (31 bundle + 17 remediation + 13 copilot + 11 license)
-- Last commit: 68751d8 docs: knowledge base v1.1
-- Content scanner: 70 patterns, caret deobfuscation
+- Unit tests: 534/534 (0 failures — was 528/534 before overnight)
+- Services: 17 containers running
+- Last commit: 134a045 security: red team round 2
+- Content scanner: 87 patterns (was 76)
 - Signal boost: 11 patterns
+- Tools: 42 (was 40, added detect_credential_access + detect_supply_chain)
 - Sprint C: COMPLETE (C1+C2+C3 all shipped)
-- Entity graph: LIVE (37+ entities, 13+ edges from investigations)
-- Dashboard revamp: sidebar nav on web-admin, auto-templates field fix on port 3000
-- Knowledge base: 16 files in docs/KNOWLEDGE_BASE/ (~38k words, 132 functions indexed)
-- Codebase manifest: docs/MANIFEST.json (162 routes, 39 tools, 70 migrations)
+- Entity graph: LIVE (213 entities, 243 edges from investigations)
+- Dual-endpoint: CONFIGURED (health check, graceful degradation, ROG extra_hosts)
+- Scoring: avg 1.84s latency, 0% benign FP, credential_access now 100 (was 50)
+
+## Overnight Session (2026-04-08/09) — 5 commits
+- 4dfa592: fix 6 unit test failures (detection thresholds + egress controller)
+- 28a6494: add detect_credential_access + detect_supply_chain (42 tools)
+- 35a48d0: dual-endpoint FAST/CODE with health check + graceful degradation
+- 134a045: red team round 2 — 7 bypasses fixed (87 scanner patterns)
+- [pending]: state files + morning report
 
 ## Sprint C — COMPLETE
 - C1: Remediation engine — DONE (e83440b)
 - C2: Copilot API — DONE (d14f88a)
 - C3: License enforcement — DONE (846ec54)
 
-## Post-Sprint C (2026-04-07/08)
-- Entity graph: migration 069, entity persistence in store.py, 5 API endpoints, cross-tenant entities
-- Dashboard revamp: sidebar nav (web-admin), auto-templates field fix (port 3000)
-- Security: curl|bash + reverse shell patterns (content scanner + signal boost)
-- Data flow: docs/DATA_FLOW.md — complete field-level pipeline trace
-- Manifest: scripts/generate_manifest.sh — auto-inventory of codebase
-- Knowledge base v1.1: 16 files, ~38k words, 132 functions, failure modes, testing guide
+## Dual-Endpoint (Ready for 31B)
+- FAST: http://zovark-inference:8080 (Gemma 4 E4B, local)
+- CODE: configurable (currently same as FAST)
+- Health check: check_endpoint_health() on startup
+- Degradation: after 3 CODE failures, falls back to FAST
+- ROG: extra_hosts rog-inference:100.100.79.83 in docker-compose.yml
+- To activate: set ZOVARK_LLM_ENDPOINT_CODE + ZOVARK_MODEL_CODE in .env, restart worker
+
+## 100-Alert Scoring (post-overnight)
+| Type | Avg Risk | Min | Max |
+|------|----------|-----|-----|
+| credential_access | 100 | 100 | 100 |
+| c2/c2_communication | 100 | 100 | 100 |
+| brute_force | 95 | 95 | 95 |
+| kerberoasting | 95 | 80 | 100 |
+| golden_ticket | 87.5 | 75 | 100 |
+| phishing | 86.7 | 70 | 100 |
+| lolbin_abuse | 81.3 | 70 | 100 |
+| dns_exfiltration | 77.5 | 70 | 100 |
+| ransomware | 74.3 | 70 | 85 |
+| All benign (27) | 0 | 0 | 0 |
 
 ## Next Sprint: D — Bundle Distribution
 - D1: zvadmin bundle CLI

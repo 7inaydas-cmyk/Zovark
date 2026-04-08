@@ -22,7 +22,7 @@
 ## LLM Infrastructure
 | Component | File | What it does | When to use |
 |-----------|------|-------------|-------------|
-| LLM Client | worker/llm_client.py | Singleton httpx, dual semaphores, GBNF grammar, output sanitizer | Any LLM-related change |
+| LLM Client | worker/llm_client.py | Singleton httpx pool, dual semaphores, GBNF grammar, output sanitizer, dual-endpoint routing, graceful degradation | Any LLM-related change |
 | LLM Gateway | worker/stages/llm_gateway.py | Dual endpoint routing (FAST/CODE), model swap | Model changes, endpoint config |
 | Tool Selection Grammar | worker/grammars/tool_selection.gbnf | Constrains FAST model JSON output | Tool selection changes |
 | Verdict Grammar | worker/grammars/verdict.gbnf | Constrains CODE model JSON output | Verdict format changes |
@@ -32,10 +32,10 @@
 ## Tools & Plans
 | Component | File | Count | When to use |
 |-----------|------|-------|-------------|
-| Tool Registry | worker/tools/catalog.py | 40 tools | Adding/removing tools |
+| Tool Registry | worker/tools/catalog.py | 42 tools | Adding/removing tools |
 | Tool Subsets | worker/tools/tool_subsets.py | Per-attack pruned catalogs | Adding tools to attack types |
 | Investigation Plans | worker/tools/investigation_plans.json | 24 plans | New attack types, plan restructuring |
-| Detection Tools | worker/tools/detection.py | 12 tools | Scoring calibration |
+| Detection Tools | worker/tools/detection.py | 15 tools | Scoring calibration |
 | MITRE Mapping | worker/stages/mitre_mapping.py | MITRE_MAP dict | MITRE coverage gaps |
 
 ## Burst Protection (3 layers)
@@ -92,7 +92,7 @@
 ## Security (Content Scanner)
 | Component | File | Count | What it does |
 |-----------|------|-------|-------------|
-| Content Scanner | worker/stages/ingest.py:RAW_LOG_ATTACK_PATTERNS | 66 patterns | Overrides benign routing when attack content in raw_log |
+| Content Scanner | worker/stages/ingest.py:RAW_LOG_ATTACK_PATTERNS | 87 patterns | Overrides benign routing when attack content in raw_log |
 | Caret Deobfuscation | worker/stages/ingest.py:_has_raw_log_attack_content | On ^ detection | Strips CMD caret escapes before pattern matching |
 | Parse Guard | worker/tools/parsing.py:parse_windows_event | 4KB limit | Prevents ReDoS on large payloads |
 

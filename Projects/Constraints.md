@@ -41,3 +41,7 @@
 | 2026-04-08 | Knowledge base v1.1 created | 16 files, 38k words, 132 functions — full system docs for non-technical readers |
 | 2026-04-08 | Entity graph fire-and-forget | Non-fatal persistence, pipeline never crashes on graph errors |
 | 2026-04-08 | Content scanner broadened | curl|bash patterns now match flags before http (was a gap) |
+| 2026-04-09 | detect_data_exfil floor requires 2+ findings | Single cloud storage mention = benign. Multiple indicators needed. |
+| 2026-04-09 | detect_golden_ticket boost gated on keywords | Only tool/technique names (mimikatz, forged) trigger 75 floor, not structural matches |
+| 2026-04-09 | detect_kerberoasting caps krbtgt risk | krbtgt TGS + RC4 = min(risk, 35), not max — it's a TGT renewal, not kerberoasting |
+| 2026-04-09 | CODE endpoint graceful degradation | After 3 consecutive failures, fall back to FAST. Resets on success. |

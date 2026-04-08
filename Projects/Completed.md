@@ -84,3 +84,12 @@
 - Hot cache (Projects/hot.md)
 - Architecture linter (12 checks)
 - Board restructure (active/completed/constraints split)
+
+## Overnight Session (2026-04-08/09)
+- Fix 6 unit test failures: detection thresholds (3) + egress controller (3) — 534/534
+- detect_credential_access: LSASS dump + mimikatz scoring 50→100
+- detect_supply_chain: package tampering, hash mismatch, CI/CD compromise
+- Dual-endpoint FAST/CODE: health check, graceful degradation, ROG extra_hosts
+- Red team round 2: 7 bypasses fixed, content scanner 76→87 patterns
+- Entity graph growing: 213 entities, 243 edges
+- credential_access 50→100, all benign 0% FP

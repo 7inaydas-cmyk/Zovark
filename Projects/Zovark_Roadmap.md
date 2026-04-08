@@ -23,10 +23,11 @@ kanban-plugin: basic
 
 - [x] Entity graph: migration 069, entity persistence, 5 API endpoints, cross-tenant
 - [x] Dashboard revamp: sidebar nav (web-admin), auto-templates field fix (port 3000)
-- [x] Security: curl|bash + reverse shell patterns (scanner 70, boost 11)
+- [x] Security: curl|bash + reverse shell patterns (scanner 87, boost 11)
 - [x] Data flow doc: docs/DATA_FLOW.md
 - [x] Codebase manifest: scripts/generate_manifest.sh → docs/MANIFEST.json
 - [x] Knowledge base v1.1: 16 files, ~38k words, 132 functions indexed — completed 2026-04-08
+- [x] Overnight 2026-04-09: 6 unit test fixes, detect_credential_access + detect_supply_chain (42 tools), dual-endpoint FAST/CODE, 7 scanner bypasses fixed, 534/534 tests
 
 ## Backlog
 
