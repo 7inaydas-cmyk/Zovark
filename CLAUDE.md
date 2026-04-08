@@ -687,6 +687,9 @@ curl -s http://localhost:8090/api/v1/tasks/<TASK_ID> -H "Authorization: Bearer $
 | BlackHat CFP | `docs/outreach/blackhat_cfp.md` |
 | CISO Brief | `marketing/outreach/ZOVARK_CISO_Brief.pdf` |
 | License Compliance | `LICENSES/README.md` |
+| Data Flow | `docs/DATA_FLOW.md` |
+| Knowledge Base | `docs/KNOWLEDGE_BASE/` (16 files, ~38k words, 132 functions indexed) |
+| Codebase Manifest | `docs/MANIFEST.json` |
 
 ---
 

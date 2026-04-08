@@ -26,6 +26,7 @@ kanban-plugin: basic
 - [x] Security: curl|bash + reverse shell patterns (scanner 70, boost 11)
 - [x] Data flow doc: docs/DATA_FLOW.md
 - [x] Codebase manifest: scripts/generate_manifest.sh → docs/MANIFEST.json
+- [x] Knowledge base v1.1: 16 files, ~38k words, 132 functions indexed — completed 2026-04-08
 
 ## Backlog
 

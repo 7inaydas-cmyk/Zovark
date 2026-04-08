@@ -1,5 +1,5 @@
 # HOT CACHE
-# Updated: 2026-04-08 (commit a0b2b61)
+# Updated: 2026-04-08 (commit 68751d8)
 # Read this FIRST. Skip CLAUDE.md unless you need deep detail.
 
 ## Current State
@@ -8,13 +8,14 @@
 - Dedup: 14/14
 - Services: 17 containers running (11 defined, 6 from profiles)
 - Tests: 72 pass (31 bundle + 17 remediation + 13 copilot + 11 license)
-- Last commit: a0b2b61 security: curl|bash patterns
-- Content scanner: 70 patterns (was 66), caret deobfuscation
-- Signal boost: 11 patterns (was 8)
+- Last commit: 68751d8 docs: knowledge base v1.1
+- Content scanner: 70 patterns, caret deobfuscation
+- Signal boost: 11 patterns
 - Sprint C: COMPLETE (C1+C2+C3 all shipped)
-- Entity graph: LIVE (37 entities, 13 edges from investigations)
+- Entity graph: LIVE (37+ entities, 13+ edges from investigations)
 - Dashboard revamp: sidebar nav on web-admin, auto-templates field fix on port 3000
-- Codebase manifest: docs/MANIFEST.json (162 routes, 40 tools, 70 migrations)
+- Knowledge base: 16 files in docs/KNOWLEDGE_BASE/ (~38k words, 132 functions indexed)
+- Codebase manifest: docs/MANIFEST.json (162 routes, 39 tools, 70 migrations)
 
 ## Sprint C — COMPLETE
 - C1: Remediation engine — DONE (e83440b)
@@ -27,6 +28,7 @@
 - Security: curl|bash + reverse shell patterns (content scanner + signal boost)
 - Data flow: docs/DATA_FLOW.md — complete field-level pipeline trace
 - Manifest: scripts/generate_manifest.sh — auto-inventory of codebase
+- Knowledge base v1.1: 16 files, ~38k words, 132 functions, failure modes, testing guide
 
 ## Next Sprint: D — Bundle Distribution
 - D1: zvadmin bundle CLI

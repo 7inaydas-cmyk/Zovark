@@ -38,3 +38,6 @@
 | 2026-04-07 | License fail-closed on all errors | Invariant #6 enforcement |
 | 2026-04-07 | Copilot Go-side deterministic first | LLM via Temporal activity for production |
 | 2026-04-07 | Sprint C complete | All 3 tasks shipped, regression 16/16 |
+| 2026-04-08 | Knowledge base v1.1 created | 16 files, 38k words, 132 functions — full system docs for non-technical readers |
+| 2026-04-08 | Entity graph fire-and-forget | Non-fatal persistence, pipeline never crashes on graph errors |
+| 2026-04-08 | Content scanner broadened | curl|bash patterns now match flags before http (was a gap) |

@@ -142,6 +142,7 @@
 |-----|------|-------------|
 | Data Flow | docs/DATA_FLOW.md | **READ FIRST** for any pipeline change — complete field-level trace from SIEM alert to intelligence output with actual code references |
 | Codebase Manifest | docs/MANIFEST.json | Machine-readable inventory: routes, tools, detectors, plans, migrations, tests. Run `bash scripts/generate_manifest.sh` to regenerate |
+| Knowledge Base | docs/KNOWLEDGE_BASE/ (16 files) | Complete system docs for non-technical readers: ~38k words, 132 functions indexed, failure modes, testing guide. Start with README.md |
 
 ## Entity Graph
 | Component | File | What it does |
