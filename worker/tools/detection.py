@@ -114,8 +114,8 @@ def detect_kerberoasting(siem_event: dict) -> dict:
     if is_rc4 and is_tgs and not is_krbtgt:
         risk = max(risk, 80)
     elif is_rc4 and is_tgs and is_krbtgt:
-        # RC4 TGT request - suspicious but not kerberoasting
-        risk = max(risk, 35)
+        # RC4 TGT request - suspicious but NOT kerberoasting. Cap risk.
+        risk = min(risk, 35)
     elif is_rc4:
         # RC4 used but not TGS - moderate concern
         risk = max(risk, 45)
@@ -220,8 +220,19 @@ def detect_golden_ticket(siem_event: dict) -> dict:
     if username:
         iocs.append(_make_ioc("username", username, raw_log))
 
-    # Golden ticket with tool/technique keywords = high confidence
-    if findings and risk < 75:
+    # Golden ticket with attack-tool/technique keywords = high confidence
+    # Only boost if we have strong indicators (tool names, forgery language),
+    # not just structural matches like "krbtgt service targeted"
+    high_confidence_keywords = [
+        "mimikatz", "golden ticket", "forged", "kekeo", "rubeus",
+        "overpass", "pass-the-ticket", "ntds.dit", "krbtgt hash",
+        "ticket forgery", "abnormal",
+    ]
+    has_high_confidence = any(
+        any(kw in f.lower() for kw in high_confidence_keywords)
+        for f in findings
+    )
+    if has_high_confidence and risk < 75:
         risk = max(risk, 75)
 
     if not findings:
@@ -557,10 +568,10 @@ def detect_data_exfil(siem_event: dict) -> dict:
         findings.append("Archived data to cloud storage - exfiltration pattern")
         risk += 25
     
-    # Multiple failed auth then success
+    # Multiple failed auth then success — high-confidence exfil indicator
     if (re.search(r'\bfailed\b', raw_lower) and re.search(r'\bauth\b', raw_lower) or re.search(r'\bmultiple\b', raw_lower) and re.search(r'\bfail\b', raw_lower)) and (re.search(r'\bthen\b', raw_lower) and re.search(r'\bsuccess\b', raw_lower) or re.search(r'\bupload\b', raw_lower)):
         findings.append("Suspicious access pattern detected")
-        risk += 25
+        risk += 50
 
     # Keyword fallback — catches narrative SIEM alerts
     exfil_keywords = [
@@ -587,9 +598,10 @@ def detect_data_exfil(siem_event: dict) -> dict:
     if src_ip and not any(i["value"] == src_ip for i in iocs):
         iocs.append(_make_ioc("ipv4", src_ip, raw_log))
     
-    # Exfiltration indicators require minimum risk
-    if findings and risk < 65:
-        risk = 65  # Ensure detection when indicators present
+    # Exfiltration indicators require minimum risk — but only when multiple
+    # indicators compound (single cloud storage mention is not exfil)
+    if len(findings) >= 2 and risk < 65:
+        risk = 65  # Ensure detection when multiple indicators present
 
     if not findings:
         risk = max(risk, 5)

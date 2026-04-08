@@ -28,7 +28,7 @@ ALLOWED_DOMAINS = {
 NO_PROXY_HOSTS = {
     "postgres", "redis", "temporal", "minio",
     "nats", "jaeger", "embedding-server", "localhost",
-    "zovark-api", "pgbouncer",
+    "zovark-api", "pgbouncer", "zovark-inference",
 }
 
 PROXY_URL = os.environ.get("HTTP_PROXY", os.environ.get("HTTPS_PROXY", ""))
@@ -44,7 +44,7 @@ class EgressController:
 
     def __init__(self, allowed_domains=None, proxy_url=None):
         self.allowed_domains = allowed_domains or ALLOWED_DOMAINS
-        self.proxy_url = proxy_url or PROXY_URL
+        self.proxy_url = proxy_url if proxy_url is not None else PROXY_URL
 
     def is_internal(self, hostname: str) -> bool:
         """Check if hostname is an internal service."""
