@@ -47,6 +47,8 @@ TOOL_CATALOG = {
     "detect_token_impersonation": {"function": detection.detect_token_impersonation, "category": "detection", "description": "Detect token impersonation via RunAs", "args": {"siem_event": dict}},
     "detect_appcert_dlls": {"function": detection.detect_appcert_dlls, "category": "detection", "description": "Detect AppCert DLLs persistence", "args": {"siem_event": dict}},
     "detect_dns_exfiltration": {"function": detection.detect_dns_exfiltration, "category": "detection", "description": "Detect DNS exfiltration: high-entropy subdomains, TXT abuse, high volume", "args": {"siem_event": dict}},
+    "detect_credential_access": {"function": detection.detect_credential_access, "category": "detection", "description": "Detect credential access: LSASS dump, mimikatz, SAM extraction, DCSync", "args": {"siem_event": dict}},
+    "detect_supply_chain": {"function": detection.detect_supply_chain, "category": "detection", "description": "Detect supply chain compromise: package tampering, hash mismatch, CI/CD compromise", "args": {"siem_event": dict}},
 
     # --- Enrichment (4 tools) ---
     "map_mitre": {"function": enrichment.map_mitre, "category": "enrichment", "description": "Map MITRE ATT&CK technique IDs to names and tactics", "args": {"technique_ids": list}},

@@ -150,9 +150,8 @@
             {"tool": "extract_hashes", "args": {"text": "$raw_log"}},
             {"tool": "extract_domains", "args": {"text": "$raw_log"}},
             {"tool": "extract_urls", "args": {"text": "$raw_log"}},
-            {"tool": "count_pattern", "args": {"text": "$raw_log", "pattern": "(?i)npm|pip|gem|nuget|maven|package|install|dependency|typosquat|hash.mismatch|checksum|CI|pipeline|build"}},
+            {"tool": "detect_supply_chain", "args": {"siem_event": "$siem_event"}},
             {"tool": "lookup_known_bad", "args": {"value": "$siem_event.source_ip", "ioc_type": "ip"}},
-            {"tool": "score_generic", "args": {"indicators_found": "$step4", "high_severity_count": "$step4", "medium_severity_count": 0}},
             {"tool": "correlate_with_history", "args": {"ioc_values": "$step1", "lookback_hours": 168, "history_context": "$correlation_context"}},
             {"tool": "map_mitre", "args": {"technique_ids": ["T1195", "T1195.001", "T1195.002"]}}
         ]
@@ -283,16 +282,15 @@
         ]
     },
     "credential_access": {
-        "description": "Investigate general credential access attempts including credential dumping, keylogging, brute force, and credential store access",
+        "description": "Investigate credential access: LSASS dump, mimikatz, SAM extraction, DCSync, pass-the-hash",
         "plan": [
             {"tool": "parse_auth_log", "args": {"raw_log": "$raw_log"}},
             {"tool": "extract_usernames", "args": {"text": "$raw_log"}},
             {"tool": "extract_ipv4", "args": {"text": "$raw_log"}},
+            {"tool": "detect_credential_access", "args": {"siem_event": "$siem_event"}},
             {"tool": "extract_hashes", "args": {"text": "$raw_log"}},
-            {"tool": "count_pattern", "args": {"text": "$raw_log", "pattern": "(?i)credential|password|lsass|mimikatz|procdump|SAM|NTDS|vault|keylog|dpapi|sekurlsa|hashdump"}},
-            {"tool": "score_generic", "args": {"indicators_found": "$step5", "high_severity_count": "$step5", "medium_severity_count": 0}},
             {"tool": "correlate_with_history", "args": {"ioc_values": "$step3", "lookback_hours": 72, "history_context": "$correlation_context"}},
-            {"tool": "map_mitre", "args": {"technique_ids": ["T1003", "T1003.001", "T1110", "T1555"]}}
+            {"tool": "map_mitre", "args": {"technique_ids": ["T1003", "T1003.001", "T1003.003", "T1110", "T1555"]}}
         ]
     },
     "api_key_abuse": {

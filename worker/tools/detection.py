@@ -1062,8 +1062,210 @@ def detect_lateral_movement(siem_event: dict) -> dict:
     # Lateral movement requires minimum risk when indicators found
     if findings and risk >= 20 and risk < 55:
         risk = 55  # Ensure detection
-    
+
     if not findings:
         risk = max(risk, 5)
-    
+
+    return {"findings": findings, "iocs": iocs, "risk_score": min(100, risk)}
+
+
+def detect_credential_access(siem_event: dict) -> dict:
+    """Detect credential access: LSASS dump, mimikatz, credential theft, SAM extraction."""
+    raw_log = siem_event.get("raw_log", "")
+    findings = []
+    iocs = []
+    risk = 0
+
+    raw_lower = raw_log.lower()
+
+    # LSASS memory dump — primary credential theft technique
+    lsass_patterns = [
+        (r'\blsass\b', "LSASS process referenced", 25),
+        (r'\bprocdump\b', "ProcDump tool detected — memory dump utility", 30),
+        (r'\bcomsvcs\.dll\b', "comsvcs.dll MiniDump — LSASS dump technique", 40),
+        (r'\bMiniDump\b', "MiniDump function referenced", 25),
+        (r'\blsass[_.\s]*dump\b', "LSASS dump detected", 45),
+    ]
+    for pattern, description, score in lsass_patterns:
+        if re.search(pattern, raw_lower if pattern.islower() else raw_log):
+            findings.append(description)
+            risk += score
+
+    # Mimikatz and credential tools
+    tool_patterns = [
+        (r'\bmimikatz\b', "Mimikatz detected — credential theft tool", 50),
+        (r'\bsekurlsa\b', "Sekurlsa module — Mimikatz credential extraction", 45),
+        (r'\blogonpasswords\b', "LogonPasswords — Mimikatz credential dump", 40),
+        (r'\bkiwi\b', "Kiwi (Meterpreter Mimikatz) detected", 40),
+        (r'\blazagne\b', "LaZagne credential recovery tool detected", 40),
+        (r'\bcredential\s*dump\w*\b', "Credential dumping detected", 35),
+        (r'\bcredential\s*(?:theft|steal|harvest|extract)\w*\b', "Credential theft language detected", 30),
+    ]
+    for pattern, description, score in tool_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # SAM/NTDS/registry credential extraction
+    registry_patterns = [
+        (r'\bsam\s+(?:hive|database|dump|export|save)\b', "SAM database extraction", 35),
+        (r'\bntds\.dit\b', "NTDS.dit — Active Directory credential database", 40),
+        (r'\breg\s+save\s+hklm\\sam\b', "Registry SAM export — credential extraction", 40),
+        (r'\breg\s+save\s+hklm\\system\b', "Registry SYSTEM export — for SAM decryption", 30),
+        (r'\bvssadmin.*ntds\b', "Shadow copy for NTDS.dit extraction", 35),
+    ]
+    for pattern, description, score in registry_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # DCSync
+    if re.search(r'\bdcsync\b', raw_lower):
+        findings.append("DCSync attack — replicating domain credentials")
+        risk += 50
+    if re.search(r'\bds-replication\b', raw_lower) or re.search(r'\bGetNCChanges\b', raw_log):
+        findings.append("Directory replication request — possible DCSync")
+        risk += 35
+
+    # Kerberos credential attacks
+    kerberos_patterns = [
+        (r'\bpass.the.hash\b', "Pass-the-Hash technique detected", 40),
+        (r'\boverpass.the.hash\b', "Overpass-the-Hash technique detected", 40),
+        (r'\bcredential\s+access\b', "Credential access activity", 20),
+    ]
+    for pattern, description, score in kerberos_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # IOCs
+    ips = extract_ipv4(raw_log)
+    iocs.extend(ips)
+
+    src_ip = siem_event.get("source_ip", "")
+    if src_ip and not any(i["value"] == src_ip for i in iocs):
+        iocs.append(_make_ioc("ipv4", src_ip, raw_log))
+
+    username = siem_event.get("username", "")
+    if username:
+        iocs.append(_make_ioc("username", username, raw_log))
+
+    # LSASS + tool = high confidence
+    has_lsass = any("LSASS" in f or "lsass" in f.lower() for f in findings)
+    has_tool = any(kw in " ".join(findings).lower() for kw in
+                   ["mimikatz", "procdump", "sekurlsa", "comsvcs", "lazagne", "kiwi"])
+    if has_lsass and has_tool:
+        risk = max(risk, 85)
+
+    # Any tool detection = moderate confidence
+    if has_tool and risk < 70:
+        risk = max(risk, 70)
+
+    if not findings:
+        risk = max(risk, 5)
+
+    return {"findings": findings, "iocs": iocs, "risk_score": min(100, risk)}
+
+
+def detect_supply_chain(siem_event: dict) -> dict:
+    """Detect supply chain compromise: package tampering, hash mismatch,
+    CI/CD compromise, dependency confusion, typosquatting, download-and-execute."""
+    raw_log = siem_event.get("raw_log", "")
+    findings = []
+    iocs = []
+    risk = 0
+
+    raw_lower = raw_log.lower()
+
+    # Package manager keywords with suspicious activity
+    pkg_mgr_patterns = [
+        (r'\b(?:npm|pip|gem|nuget|maven|cargo|composer|yarn)\s+(?:install|add|update)\b', "Package manager install detected", 10),
+        (r'\bpostinstall\b', "Post-install script execution — supply chain risk", 30),
+        (r'\bsetup\.py\b', "setup.py execution detected", 20),
+        (r'\bbuild\.gradle\b', "Gradle build file reference", 10),
+        (r'\bpackage\.json\b', "package.json modification detected", 10),
+    ]
+    for pattern, description, score in pkg_mgr_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # Hash/checksum mismatch
+    hash_patterns = [
+        (r'\b(?:sha256|sha1|md5|checksum)\s*mismatch\b', "Hash mismatch detected — possible tampered package", 45),
+        (r'\bintegrity\s+(?:violation|check\s+failed|error)\b', "Integrity check failed", 40),
+        (r'\bexpected\s+[a-f0-9]{64}\b', "Expected SHA256 hash comparison", 20),
+        (r'\bsignature\s+(?:invalid|verification\s+failed|mismatch)\b', "Signature verification failed", 40),
+    ]
+    for pattern, description, score in hash_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # Download-and-execute (curl|bash, wget|sh)
+    dl_exec_patterns = [
+        (r'\bcurl\b[^\n]{0,100}\|\s*(?:ba)?sh\b', "curl|bash download-and-execute", 40),
+        (r'\bwget\b[^\n]{0,100}\|\s*(?:ba)?sh\b', "wget|sh download-and-execute", 40),
+        (r'\bcurl\b[^\n]{0,100}-o\s+/tmp/', "curl download to /tmp — suspicious", 30),
+        (r'\bpython\s+-c\s+["\x27]import\s+(?:urllib|requests)\b', "Python download script execution", 30),
+    ]
+    for pattern, description, score in dl_exec_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # CI/CD compromise indicators
+    cicd_patterns = [
+        (r'\b(?:pipeline|build\s+server|ci[/-]cd|jenkins|github\s+actions?|gitlab\s+ci)\b', "CI/CD system referenced", 15),
+        (r'\bartifact\s+(?:tamper|modif|replac)\w*\b', "Build artifact tampering detected", 35),
+        (r'\bregistry\s+(?:poison|inject|compromise)\w*\b', "Package registry compromise detected", 40),
+        (r'\bunauthorized\s+(?:commit|push|merge|deploy)\b', "Unauthorized CI/CD change detected", 30),
+    ]
+    for pattern, description, score in cicd_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # Dependency confusion
+    dep_confusion_patterns = [
+        (r'\b(?:internal|private)\s+package\b', "Internal package reference — potential confusion target", 20),
+        (r'\bpublic\s+registry\b', "Public registry reference", 10),
+        (r'\bdependency\s+confusion\b', "Dependency confusion attack detected", 45),
+        (r'\btyposquat\w*\b', "Typosquatting detected", 40),
+    ]
+    for pattern, description, score in dep_confusion_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # Known supply chain attack tools/incidents
+    known_patterns = [
+        (r'\b(?:codecov|ua-parser|event-stream|flatmap-stream|rest-client)\b', "Known supply chain compromise package", 50),
+        (r'\bsupply.chain\b', "Supply chain attack language detected", 25),
+        (r'\bbackdoor\w*\s+(?:in|via|through)\s+(?:package|dependency|library)\b', "Backdoor via dependency detected", 45),
+    ]
+    for pattern, description, score in known_patterns:
+        if re.search(pattern, raw_lower):
+            findings.append(description)
+            risk += score
+
+    # IOCs
+    urls = extract_urls(raw_log)
+    iocs.extend(urls)
+    domains = extract_domains(raw_log)
+    iocs.extend(domains)
+    ips = extract_ipv4(raw_log)
+    iocs.extend(ips)
+
+    src_ip = siem_event.get("source_ip", "")
+    if src_ip and not any(i.get("value") == src_ip for i in iocs):
+        iocs.append(_make_ioc("ipv4", src_ip, raw_log))
+
+    # Multiple indicators compound
+    if len(findings) >= 2 and risk < 65:
+        risk = 65
+
+    if not findings:
+        risk = max(risk, 5)
+
     return {"findings": findings, "iocs": iocs, "risk_score": min(100, risk)}

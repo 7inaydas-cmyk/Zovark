@@ -64,7 +64,7 @@ TOOL_SUBSETS = {
     ],
     "supply_chain_compromise": [
         "extract_hashes", "extract_domains", "extract_urls",
-        "count_pattern", "lookup_known_bad", "score_generic",
+        "detect_supply_chain", "lookup_known_bad",
         "correlate_with_history", "map_mitre",
     ],
     "kerberoasting": [
@@ -119,7 +119,7 @@ TOOL_SUBSETS = {
     ],
     "credential_access": [
         "parse_auth_log", "extract_usernames", "extract_ipv4",
-        "extract_hashes", "count_pattern", "score_generic",
+        "detect_credential_access", "extract_hashes",
         "correlate_with_history", "map_mitre",
     ],
     "api_key_abuse": [
