@@ -160,6 +160,25 @@ RAW_LOG_ATTACK_PATTERNS = [
     r'(?i)wget\s+[^\n]*\|\s*(?:ba)?sh',
     r'(?i)curl\s+[^\n]*-o\s+/tmp/',
     r'(?i)python\s+-c\s+["\']import\s+(?:socket|subprocess|os)',
+    # --- Overnight session: additional reverse shell / supply chain patterns ---
+    # Bash reverse shell via /dev/tcp
+    r'(?i)bash\s+-i\s+>&\s*/dev/tcp/',
+    r'(?i)/dev/tcp/\d+\.\d+\.\d+\.\d+',
+    # Netcat reverse/bind shell
+    r'(?i)\bnc\s+-[elp].*\d+',
+    r'(?i)\bncat\s+-[elp]',
+    # Socat shell
+    r'(?i)\bsocat\b[^\n]{0,100}exec:',
+    # Base64-encoded pipe to shell
+    r'(?i)base64\s+-d\s*\|\s*(ba)?sh',
+    # Subshell command execution patterns
+    r'(?i)\$\([^\)]*curl\b',
+    r'(?i)\$\([^\)]*wget\b',
+    # Supply chain: hash mismatch / integrity
+    r'(?i)(?:sha256|sha1|md5|checksum)\s+mismatch',
+    r'(?i)integrity\s+(?:violation|check\s+failed)',
+    # Supply chain: postinstall script abuse
+    r'(?i)postinstall\s+script[^\n]{0,100}(?:curl|wget|exec|eval)',
 ]
 
 
