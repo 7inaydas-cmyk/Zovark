@@ -4,6 +4,81 @@ An alphabetical reference of the functions that make Zovark work. For each: wher
 
 ---
 
+## Functions by Concept
+
+### Pipeline Stages (6 entry points)
+- `ingest_alert` (worker/stages/ingest.py) — Stage 1: sanitize, dedup, skill match
+- `analyze_alert` (worker/stages/analyze.py) — Stage 2: pick plan or ask LLM
+- `execute_investigation` (worker/stages/execute.py) — Stage 3: run tools
+- `assess_results` (worker/stages/assess.py) — Stage 4: verdict + IOCs
+- `apply_governance` (worker/stages/govern.py) — Stage 4.5: autonomy check
+- `store_investigation` (worker/stages/store.py) — Stage 5: persist everything
+
+### Burst Protection (3 layers)
+- `checkPreDedup` (api/alert_dedup.go) — Layer 1: Redis exact-hash dedup
+- `tryBatchAlert` (api/batch_buffer.go) — Layer 2: Lua-atomic batch grouping
+- `checkBackpressure` (api/backpressure.go) — Layer 3: workflow queue depth throttle
+- `registerPreDedup` (api/alert_dedup.go) — Register hash after commit
+- `clearDedupEntry` (api/alert_dedup.go) — Force reinvestigate bypass
+
+### Tool Execution Engine
+- `execute_plan` (worker/tools/runner.py) — Main tool dispatch loop
+- `_run_single_step` (worker/tools/runner.py) — Execute one tool with timeout
+- `_resolve_args` / `_resolve_ref` (worker/tools/runner.py) — $stepN variable resolution
+- `_evaluate_condition` (worker/tools/runner.py) — Conditional branching (no eval)
+- `_build_dependency_graph` (worker/tools/runner.py) — DAG for parallel execution
+- `_topological_batches` (worker/tools/runner.py) — Parallel batch ordering
+
+### Entity Graph
+- `persist_entities` (worker/intelligence/entity_graph.py) — UPSERT IOC nodes
+- `persist_edges` (worker/intelligence/entity_graph.py) — UPSERT relationships
+- `persist_cross_tenant` (worker/intelligence/entity_graph.py) — Anonymous shared intelligence
+- `infer_relationships` (worker/intelligence/entity_graph.py) — Derive edges from SIEM fields
+- `listEntitiesHandler` / `getEntityHandler` / `entityGraphHandler` / `searchEntitiesHandler` / `entityStatsHandler` (api/entity_handlers.go) — 5 REST endpoints
+
+### LLM / Inference
+- `llm_call` (worker/stages/llm_gateway.py) — Central LLM dispatch with dual endpoints
+- `llm_request` (worker/llm_client.py) — Singleton httpx client with semaphores
+- `_scrub_code` (worker/stages/analyze.py) — Strip LLM prose and control tokens
+- `_parse_tool_plan` (worker/stages/analyze.py) — Validate LLM tool selection output
+
+### SIEM Connectors
+- `createTaskHandler` (api/task_handlers.go) — POST /tasks direct submission
+- `splunkIngestHandler` (api/siem_ingest.go) — Splunk HEC format
+- `elasticIngestHandler` (api/siem_ingest.go) — Elastic SIEM webhook
+- `createIngestTask` (api/siem_ingest.go) — Shared task creation logic
+- `mapAlertToTaskType` (api/siem_ingest.go) — Regex-based alert classification
+
+### Intelligence Layer
+- `explain` / `suggest` / `correlate` / `brief` (worker/intelligence/copilot.py) — Analyst assistant
+- `suggest_actions` (worker/intelligence/remediation.py) — Deterministic remediation rules
+- `verify_license` (worker/bundles/license.py) — Ed25519 signature check
+
+### Security / Input Validation
+- `sanitize_siem_event` (worker/stages/input_sanitizer.py) — 25 injection patterns
+- `_has_attack_indicators` (worker/stages/ingest.py) — 40 keyword attack check
+- `_has_raw_log_attack_content` (worker/stages/ingest.py) — 70 regex content scanner
+- `validate_investigation_output` (worker/stages/output_validator.py) — Pydantic schema check
+- `_extract_iocs_from_signals` (worker/stages/assess.py) — Regex IOC extraction
+
+### Scoring / Verdict
+- `_derive_verdict` (worker/stages/assess.py) — Risk thresholds → verdict string
+- `_severity_from_risk` (worker/stages/assess.py) — Risk → critical/high/medium/low
+- `_generate_plain_english` (worker/stages/assess.py) — Template summary for analysts
+- `_fp_confidence` (worker/stages/assess.py) — False positive probability
+
+### Dashboard / SSE
+- `handleForgeStart` / `handleForgeStream` (api/forge_handlers.go) — Alert forge
+- `handlePipelineStatus` (api/zvadmin_handlers.go) — Real-time pipeline metrics
+- `handleAnalyticsSummary` (api/analytics_handlers.go) — Verdict/risk aggregation
+- `streamAllTaskUpdates` (api/sse.go) — SSE event stream
+
+---
+
+## Alphabetical Index
+
+---
+
 ## Go API Functions (api/)
 
 ### beginTenantTx
@@ -573,6 +648,42 @@ An alphabetical reference of the functions that make Zovark work. For each: wher
 **Purpose:** Maps vendor-specific field names to Zovark standard names across 70+ field mappings (Splunk, Elastic, firewall formats).
 **Called by:** `ingest_alert`.
 **Calls:** Dict-based field remapping.
+
+### parse_auth_log
+**File:** `worker/tools/parsing.py`
+**Purpose:** Parses Linux auth/syslog lines into structured fields: action (success/failure), username, source_ip, authentication method.
+**Called by:** Tool runner during brute_force, privilege_escalation, credential_access plans.
+**Calls:** Regex pattern matching on auth log format.
+
+### parse_dns_query
+**File:** `worker/tools/parsing.py`
+**Purpose:** Parses DNS query logs into structured fields: query_name, query_type, source_ip, response_code.
+**Called by:** Tool runner during dns_exfiltration, network_beaconing plans.
+**Calls:** Regex pattern matching on DNS log format.
+
+### parse_http_request
+**File:** `worker/tools/parsing.py`
+**Purpose:** Parses HTTP access logs into structured fields: method, path, status_code, source_ip, user_agent.
+**Called by:** Tool runner during api_key_abuse plan.
+**Calls:** Regex pattern matching on HTTP log format.
+
+### parse_syslog
+**File:** `worker/tools/parsing.py`
+**Purpose:** Parses standard syslog format into structured fields: timestamp, hostname, facility, severity, message.
+**Called by:** Tool runner when raw_log is in syslog format.
+**Calls:** Regex pattern matching on RFC 3164/5424 syslog format.
+
+### parse_windows_event
+**File:** `worker/tools/parsing.py`
+**Purpose:** Parses Windows Event Log key=value pairs into a structured dict. Includes 4KB parse guard to prevent ReDoS on large payloads.
+**Called by:** Tool runner during ransomware, kerberoasting, golden_ticket, lateral_movement, and other Windows-focused plans.
+**Calls:** Regex key=value extraction with size guard.
+
+### detect_encoding
+**File:** `worker/tools/analysis.py`
+**Purpose:** Detects base64, hex, or URL encoding in text. Used to find obfuscated payloads in logs.
+**Called by:** Tool runner during data_exfiltration_detection plan.
+**Calls:** Regex pattern matching for encoding signatures.
 
 ### _parse_tool_plan
 **File:** `worker/stages/analyze.py`

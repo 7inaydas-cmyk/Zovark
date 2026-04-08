@@ -28,6 +28,8 @@ This is the COMPLETE documentation of the Zovark codebase, written for people wh
 | 10 | [FUNCTION_INDEX](10_FUNCTION_INDEX.md) | Master index of ~100 key functions: location, purpose, connections |
 | 11 | [DECISION_LOG](11_DECISION_LOG.md) | Every major architectural decision: what we chose, why, what we rejected |
 | 12 | [SWAMI_FAQ](12_SWAMI_FAQ.md) | 15 questions a cofounder would ask, answered without jargon |
+| 13 | [FAILURE_MODES](13_FAILURE_MODES.md) | Every failure path: what breaks, what you see, auto-recovery, operator actions |
+| 14 | [TESTING](14_TESTING.md) | Test suite, regression, benchmarks — what's tested and how to run it |
 
 ---
 
@@ -50,6 +52,22 @@ This is the COMPLETE documentation of the Zovark codebase, written for people wh
 | Frontend Files | 55 |
 
 ---
+
+## Version History
+
+| Date | Version | What Changed |
+|------|---------|-------------|
+| 2026-04-08 | v1.0 | Initial generation — 14 files, ~32,000 words |
+| 2026-04-08 | v1.1 | Gap fixes: +2 files (failure modes, testing), database depth, cross-refs, concept index, glossary reorg, 6 missing functions added |
+
+## Related Documents
+
+- [HANDOVER.md](../../HANDOVER.md) — How to work in this codebase (process rules, anti-patterns)
+- [CLAUDE.md](../../CLAUDE.md) — Full system architecture reference
+- [COMPONENT_REGISTRY.md](../../COMPONENT_REGISTRY.md) — Living inventory of every module
+- [docs/MANIFEST.json](../MANIFEST.json) — Machine-readable codebase inventory
+- [docs/DATA_FLOW.md](../DATA_FLOW.md) — Complete field-level pipeline trace
+- [docs/PRODUCT_GUIDE.md](../PRODUCT_GUIDE.md) — Product capabilities and API reference
 
 ## How This Knowledge Base Was Generated
 

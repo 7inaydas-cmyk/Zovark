@@ -116,3 +116,17 @@ From the analyst's perspective, here is what they see: an alert appears on the d
 The entire journey -- from SIEM alert to analyst-ready verdict -- typically takes under 3 seconds for known patterns and under 30 seconds for novel threats. No alert is ignored. No investigation is skipped. And every decision is auditable, traceable, and explainable.
 
 That is how Zovark works.
+
+---
+
+## Where to Go Next
+
+- **Full technical detail on each stage:** See [03_PIPELINE_STAGES.md](03_PIPELINE_STAGES.md)
+- **All 40 investigation tools:** See [04_EVERY_TOOL.md](04_EVERY_TOOL.md)
+- **All 24 investigation plans:** See [05_INVESTIGATION_PLANS.md](05_INVESTIGATION_PLANS.md)
+- **Entity graph deep dive:** See [07_ENTITY_GRAPH.md](07_ENTITY_GRAPH.md)
+- **Complete code trace for 3 scenarios:** See [08_CALL_GRAPH.md](08_CALL_GRAPH.md)
+- **Every Docker service:** See [01_EVERY_SERVICE.md](01_EVERY_SERVICE.md)
+- **Every API endpoint:** See [02_API_ENDPOINTS.md](02_API_ENDPOINTS.md)
+- **What can go wrong:** See [13_FAILURE_MODES.md](13_FAILURE_MODES.md)
+- **How testing works:** See [14_TESTING.md](14_TESTING.md)

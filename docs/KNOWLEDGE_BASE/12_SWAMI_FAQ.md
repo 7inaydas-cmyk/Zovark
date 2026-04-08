@@ -5,6 +5,7 @@ Questions a non-technical cofounder would ask, answered without jargon.
 ---
 
 ## 1. "How does an alert become a verdict?"
+*(Full narrative: [00_HOW_ZOVARK_WORKS.md](00_HOW_ZOVARK_WORKS.md) | Code trace: [08_CALL_GRAPH.md](08_CALL_GRAPH.md))*
 
 A SIEM system (like Splunk or Elastic) detects something unusual and sends an alert to Zovark's front door (the Go API on port 8090). The alert goes through three bouncers (dedup, batching, backpressure) to prevent flooding. If it passes, it gets put in a queue (Temporal).
 
@@ -57,6 +58,7 @@ The pipeline never crashes due to LLM failure.
 ---
 
 ## 5. "How do we add a new type of attack detection?"
+*(Tool catalog: [04_EVERY_TOOL.md](04_EVERY_TOOL.md) | Plans: [05_INVESTIGATION_PLANS.md](05_INVESTIGATION_PLANS.md))*
 
 Three ways, from easiest to hardest:
 
@@ -85,6 +87,7 @@ Setup takes about 15 minutes on the customer side. The bootstrap wizard in the a
 ---
 
 ## 7. "What's the entity graph and why does it matter?"
+*(Deep dive: [07_ENTITY_GRAPH.md](07_ENTITY_GRAPH.md) | Database tables: [06_DATABASE_TABLES.md](06_DATABASE_TABLES.md))*
 
 Think of it as Zovark's long-term memory. Without the entity graph, every investigation starts from scratch. With it, Zovark remembers: "This IP address was involved in a brute force attack last Tuesday."
 
@@ -170,6 +173,7 @@ After that, they pick a specific area (tools, API, dashboard) and read the relev
 ---
 
 ## 14. "What's the most fragile part of the system?"
+*(All failure modes: [13_FAILURE_MODES.md](13_FAILURE_MODES.md))*
 
 The LLM inference container. It's a single point of failure for Path C investigations and verdict summaries. If it crashes or runs out of memory:
 - Path A investigations continue fine (no LLM needed)
