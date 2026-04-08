@@ -19,6 +19,14 @@ kanban-plugin: basic
 - [ ] E1: Model benchmark — needs 48h stable pipeline
 - [ ] E3: Fine-tuning pilot — needs 200 DPO pairs
 
+## Done (Post-Sprint C)
+
+- [x] Entity graph: migration 069, entity persistence, 5 API endpoints, cross-tenant
+- [x] Dashboard revamp: sidebar nav (web-admin), auto-templates field fix (port 3000)
+- [x] Security: curl|bash + reverse shell patterns (scanner 70, boost 11)
+- [x] Data flow doc: docs/DATA_FLOW.md
+- [x] Codebase manifest: scripts/generate_manifest.sh → docs/MANIFEST.json
+
 ## Backlog
 
 - [ ] Clean stale Ollama refs (airgap, test, dpo)

@@ -1,23 +1,16 @@
 import { useState, useEffect, useCallback, useRef, Component, type ReactNode, type ErrorInfo } from "react";
 import {
-  Activity,
-  Plug,
   Settings,
   RefreshCw,
   Loader2,
   CheckCircle2,
   XCircle,
   AlertTriangle,
-  Shield,
-  LogOut,
   Pencil,
   Save,
   X,
   Clock,
   User,
-  Terminal,
-  Zap,
-  BarChart2,
 } from "lucide-react";
 import {
   getSystemHealth,
@@ -30,9 +23,12 @@ import type {
   ConfigEntry,
   ConfigAuditEntry,
 } from "../lib/api";
+import Sidebar, { type Page } from "./Sidebar";
 import ZvadminPanel from "./ZvadminPanel";
 import AlertForge from "./AlertForge";
 import AnalyticsPanel from "./AnalyticsPanel";
+import PipelineMonitor from "./PipelineMonitor";
+import AutoTemplates from "./AutoTemplates";
 
 // Error boundary to catch and display React crashes instead of blank screen
 class TabErrorBoundary extends Component<
@@ -65,75 +61,29 @@ interface AdminDashboardProps {
   onLogout: () => void;
 }
 
-type Tab = "health" | "siem" | "config" | "zvadmin" | "forge" | "analytics";
-
 export default function AdminDashboard({
   token,
   onLogout,
 }: AdminDashboardProps) {
-  const [tab, setTab] = useState<Tab>("health");
-
-  const tabs: { id: Tab; label: string; icon: typeof Activity }[] = [
-    { id: "health", label: "System Health", icon: Activity },
-    { id: "siem", label: "SIEM & Ingestion", icon: Plug },
-    { id: "config", label: "Configuration", icon: Settings },
-    { id: "zvadmin", label: "Zvadmin", icon: Terminal },
-    { id: "forge", label: "Alert Forge", icon: Zap },
-    { id: "analytics", label: "Analytics", icon: BarChart2 },
-  ];
+  const [page, setPage] = useState<Page>("health");
 
   return (
-    <div className="min-h-screen flex flex-col">
-      {/* Top bar */}
-      <header className="border-b border-zinc-800 px-6 py-3">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <Shield className="w-5 h-5 text-emerald-400" />
-            <span className="text-sm font-semibold text-zinc-100">
-              Zovark Control Plane
-            </span>
-            <span className="badge-green">OPERATIONAL</span>
-          </div>
-          <button
-            onClick={onLogout}
-            className="text-zinc-500 hover:text-zinc-300 transition-colors flex items-center gap-1.5 text-xs"
-          >
-            <LogOut className="w-3.5 h-3.5" />
-            Sign Out
-          </button>
-        </div>
-      </header>
+    <div className="min-h-screen flex">
+      {/* Sidebar */}
+      <Sidebar activePage={page} onNavigate={setPage} onLogout={onLogout} />
 
-      {/* Tab bar */}
-      <nav className="border-b border-zinc-800 px-6">
-        <div className="max-w-7xl mx-auto flex gap-1">
-          {tabs.map((t) => (
-            <button
-              key={t.id}
-              onClick={() => setTab(t.id)}
-              className={`flex items-center gap-2 px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
-                tab === t.id
-                  ? "border-emerald-500 text-emerald-400"
-                  : "border-transparent text-zinc-500 hover:text-zinc-300"
-              }`}
-            >
-              <t.icon className="w-4 h-4" />
-              {t.label}
-            </button>
-          ))}
-        </div>
-      </nav>
-
-      {/* Content */}
-      <main className="flex-1 px-6 py-6">
-        <div className="max-w-7xl mx-auto">
-          <TabErrorBoundary key={tab} tabName={tab}>
-            {tab === "health" && <HealthTab token={token} />}
-            {tab === "siem" && <SIEMTab token={token} />}
-            {tab === "config" && <ConfigTab token={token} />}
-            {tab === "zvadmin" && <ZvadminPanel token={token} />}
-            {tab === "forge" && <AlertForge token={token} />}
-            {tab === "analytics" && <AnalyticsPanel token={token} />}
+      {/* Main content */}
+      <main className="flex-1 overflow-y-auto">
+        <div className="max-w-7xl mx-auto px-6 py-6">
+          <TabErrorBoundary key={page} tabName={page}>
+            {page === "health" && <HealthTab token={token} />}
+            {page === "siem" && <SIEMTab token={token} />}
+            {page === "config" && <ConfigTab token={token} />}
+            {page === "zvadmin" && <ZvadminPanel token={token} />}
+            {page === "forge" && <AlertForge token={token} />}
+            {page === "analytics" && <AnalyticsPanel token={token} />}
+            {page === "pipeline" && <PipelineMonitor token={token} />}
+            {page === "auto-templates" && <AutoTemplates token={token} />}
           </TabErrorBoundary>
         </div>
       </main>

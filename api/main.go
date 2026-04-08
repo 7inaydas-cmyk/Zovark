@@ -303,6 +303,13 @@ func main() {
 		api.GET("/intelligence/top-threats", topThreatsHandler)
 		api.GET("/intelligence/stats", intelligenceStatsHandler)
 
+		// Entity Graph (authenticated users)
+		api.GET("/entities", listEntitiesHandler)
+		api.GET("/entities/search", searchEntitiesHandler)
+		api.GET("/entities/stats", entityStatsHandler)
+		api.GET("/entities/:id", getEntityHandler)
+		api.GET("/entities/:id/graph", entityGraphHandler)
+
 		// Sprint 2A: Detection engine (authenticated for GET, admin for mutations)
 		api.GET("/detections/rules", listDetectionRulesHandler)
 		api.GET("/detections/stats", detectionStatsHandler)

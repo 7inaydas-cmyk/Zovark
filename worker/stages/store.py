@@ -336,6 +336,24 @@ async def store_investigation(data: dict) -> dict:
                 trace_id=trace_id,
             )
 
+        # 5. Persist entities and edges to the entity graph (non-fatal)
+        if status == "completed" and tenant_id and iocs:
+            try:
+                from intelligence.entity_graph import (
+                    persist_entities, persist_edges,
+                    persist_cross_tenant, infer_relationships,
+                )
+                entity_map = persist_entities(
+                    conn, tenant_id, investigation_id or task_id, iocs, risk_score,
+                )
+                if entity_map:
+                    rels = infer_relationships(iocs, siem_event)
+                    if rels:
+                        persist_edges(conn, tenant_id, investigation_id or task_id, rels, entity_map)
+                    persist_cross_tenant(conn, iocs, risk_score, verdict)
+            except Exception as eg_err:
+                print(f"Entity graph persistence failed (non-fatal): {eg_err}")
+
         # NOTIFY for SSE real-time updates (Mission 9)
         if status == "completed" and tenant_id:
             try:

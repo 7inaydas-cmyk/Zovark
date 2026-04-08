@@ -137,6 +137,20 @@
 | Web Admin | zovark-web-admin | 3100 | nginx:alpine, SPA fallback |
 | Signoz | tracing profile | 3301 | OTEL trace backend |
 
+## Data Flow Documentation
+| Doc | File | When to use |
+|-----|------|-------------|
+| Data Flow | docs/DATA_FLOW.md | **READ FIRST** for any pipeline change — complete field-level trace from SIEM alert to intelligence output with actual code references |
+| Codebase Manifest | docs/MANIFEST.json | Machine-readable inventory: routes, tools, detectors, plans, migrations, tests. Run `bash scripts/generate_manifest.sh` to regenerate |
+
+## Entity Graph
+| Component | File | What it does |
+|-----------|------|-------------|
+| Entity Persistence | worker/intelligence/entity_graph.py | UPSERT IOCs as entity nodes, infer edges, cross-tenant sightings |
+| Entity API | api/entity_handlers.go | 5 REST endpoints: list, get, graph traversal, search, stats |
+| Entity Migration | migrations/069_cross_tenant_entities.sql | cross_tenant_entities table + entity/edge column additions |
+| Store Wiring | worker/stages/store.py (line ~340) | Calls entity persistence after investigation completes (non-fatal) |
+
 ## Engineering Process
 | Tool | File | When to use |
 |------|------|-------------|

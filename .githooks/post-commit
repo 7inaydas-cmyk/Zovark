@@ -1,0 +1,4 @@
+#!/bin/bash
+echo ""
+echo "=== REMINDER: Run 'bash scripts/generate_manifest.sh' to update docs/MANIFEST.json ==="
+echo ""

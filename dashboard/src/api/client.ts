@@ -834,7 +834,19 @@ export const fetchAutoTemplates = async (): Promise<{ items: AutoTemplate[] }> =
         // Return empty if endpoint not yet implemented
         return { items: [] };
     }
-    return response.json();
+    const data = await response.json();
+    // API returns skill_slug/skill_name/promotion_status — map to client interface
+    const items = (data.items ?? data ?? []).map((t: Record<string, unknown>) => ({
+        slug: t.skill_slug ?? t.slug ?? '',
+        name: t.skill_name ?? t.name ?? '',
+        task_types: t.task_types ?? [],
+        auto_promoted: t.auto_promoted ?? false,
+        source_task_id: t.source_task_id ?? '',
+        promoted_at: t.promoted_at ?? '',
+        promoted_by: t.promoted_by ?? '',
+        status: t.promotion_status ?? t.status ?? 'pending',
+    }));
+    return { items };
 };
 
 export const disableAutoTemplate = async (slug: string): Promise<{ status: string }> => {
