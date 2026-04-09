@@ -1269,3 +1269,134 @@ def detect_supply_chain(siem_event: dict) -> dict:
         risk = max(risk, 5)
 
     return {"findings": findings, "iocs": iocs, "risk_score": min(100, risk)}
+
+
+def detect_powershell_obfuscation(siem_event: dict) -> dict:
+    """Detect PowerShell obfuscation: -EncodedCommand, base64-decoded IEX/Invoke-Expression,
+    download cradles, and off-hours execution boost.
+
+    Closes the lolbin_abuse gap from the 1000-alert benchmark where novel
+    PowerShell -enc variants were scoring 15 instead of being flagged as attacks.
+    """
+    raw_log = siem_event.get("raw_log", "")
+    findings = []
+    iocs = []
+    risk = 0
+
+    raw_lower = raw_log.lower()
+
+    # PowerShell encoded command — primary indicator
+    is_encoded = bool(re.search(
+        r'powershell(?:\.exe)?\s+[^\n]{0,200}-(?:enc(?:oded(?:command)?)?|e)\b',
+        raw_lower,
+    ))
+    if is_encoded:
+        findings.append("PowerShell -EncodedCommand detected (base64 payload)")
+        risk += 75
+
+    # Try to base64-decode any long base64 strings in the raw log and check
+    # for IEX / Invoke-Expression / DownloadString / Net.WebClient patterns.
+    # The smoking gun: encoded payload that decodes to a download cradle.
+    decoded_iex = False
+    decoded_download = False
+    try:
+        import base64 as _b64
+        # Find base64-looking strings of >=20 chars (likely real payloads)
+        for match in re.finditer(r'[A-Za-z0-9+/]{20,}={0,2}', raw_log):
+            blob = match.group(0)
+            # Pad to multiple of 4 for safe decode
+            pad = (-len(blob)) % 4
+            try:
+                decoded = _b64.b64decode(blob + ('=' * pad), validate=False)
+                # PowerShell -enc uses UTF-16LE — also try plain UTF-8
+                for enc in ('utf-16-le', 'utf-8'):
+                    try:
+                        text = decoded.decode(enc, errors='ignore')
+                        if not text:
+                            continue
+                        text_lower = text.lower()
+                        if re.search(r'\b(?:iex|invoke-expression)\b', text_lower):
+                            decoded_iex = True
+                        if re.search(
+                            r'(?:downloadstring|downloadfile|net\.webclient|invoke-webrequest|start-bitstransfer)',
+                            text_lower,
+                        ):
+                            decoded_download = True
+                        if decoded_iex or decoded_download:
+                            break
+                    except Exception:
+                        continue
+                if decoded_iex or decoded_download:
+                    break
+            except Exception:
+                continue
+    except Exception:
+        pass
+
+    if decoded_iex:
+        findings.append("Base64-decoded payload reveals IEX/Invoke-Expression — code execution")
+        risk = max(risk, 90)
+    if decoded_download:
+        findings.append("Base64-decoded payload reveals download cradle (Net.WebClient/DownloadString)")
+        risk = max(risk, 90)
+
+    # Plain-text IEX / download cradle in the raw log (no decoding needed)
+    if re.search(r'\b(?:iex|invoke-expression)\b', raw_lower):
+        findings.append("PowerShell IEX (Invoke-Expression) detected")
+        risk = max(risk, 70)
+    if re.search(r'\bnew-object\s+(?:net\.webclient|system\.net\.webclient)\b', raw_lower):
+        findings.append("PowerShell Net.WebClient download cradle detected")
+        risk = max(risk, 75)
+    if re.search(r'\bdownloadstring\s*\(\s*["\x27]https?://', raw_lower):
+        findings.append("PowerShell DownloadString from URL — remote code fetch")
+        risk = max(risk, 80)
+    if re.search(r'\b(?:start-bitstransfer|invoke-webrequest)\b[^\n]{0,200}https?://', raw_lower):
+        findings.append("PowerShell remote download via BITS or Invoke-WebRequest")
+        risk = max(risk, 70)
+
+    # Other obfuscation techniques
+    if re.search(r'\b-(?:nop|noprofile)\b', raw_lower):
+        findings.append("PowerShell -NoProfile flag (evasion)")
+        risk += 5
+    if re.search(r'\b-(?:w(?:indowstyle)?\s+hidden|windowstyle\s+hidden)\b', raw_lower):
+        findings.append("PowerShell -WindowStyle Hidden (evasion)")
+        risk += 5
+    if re.search(r'\b-(?:exec(?:utionpolicy)?|ep)\s+bypass\b', raw_lower):
+        findings.append("PowerShell ExecutionPolicy Bypass (evasion)")
+        risk += 5
+    if re.search(r'\bfromBase64String\b', raw_log):
+        findings.append("FromBase64String inline decode (obfuscation)")
+        risk += 10
+
+    # Off-hours execution boost — combined with -enc this is the highest signal
+    is_off_hours = bool(re.search(
+        r'\b(?:off.hours|after.hours|night|weekend|0[0-5]:\d{2}|02:\d{2}|03:\d{2}|04:\d{2})\b',
+        raw_lower,
+    ))
+    if is_off_hours and is_encoded:
+        findings.append("Off-hours encoded PowerShell execution — high-confidence attack")
+        risk = max(risk, 95)
+    elif is_off_hours and findings:
+        findings.append("Off-hours execution adds suspicion")
+        risk += 10
+
+    # IOCs
+    ips = extract_ipv4(raw_log)
+    iocs.extend(ips)
+    urls = extract_urls(raw_log)
+    iocs.extend(urls)
+    domains = extract_domains(raw_log)
+    iocs.extend(domains)
+
+    src_ip = siem_event.get("source_ip", "")
+    if src_ip and not any(i.get("value") == src_ip for i in iocs):
+        iocs.append(_make_ioc("ipv4", src_ip, raw_log))
+
+    username = siem_event.get("username", "")
+    if username:
+        iocs.append(_make_ioc("username", username, raw_log))
+
+    if not findings:
+        risk = max(risk, 5)
+
+    return {"findings": findings, "iocs": iocs, "risk_score": min(100, risk)}

@@ -206,16 +206,15 @@
         ]
     },
     "lolbin_abuse": {
-        "description": "Detect living-off-the-land binary abuse including certutil, mshta, bitsadmin, rundll32, and regsvr32 misuse",
+        "description": "Detect living-off-the-land binary abuse: certutil, mshta, bitsadmin, rundll32, regsvr32, and PowerShell -EncodedCommand obfuscation",
         "plan": [
             {"tool": "parse_windows_event", "args": {"raw_log": "$raw_log"}},
             {"tool": "extract_ipv4", "args": {"text": "$raw_log"}},
             {"tool": "extract_urls", "args": {"text": "$raw_log"}},
             {"tool": "detect_lolbin_abuse", "args": {"siem_event": "$siem_event"}},
-            {"tool": "count_pattern", "args": {"text": "$raw_log", "pattern": "(?i)certutil|mshta|bitsadmin|rundll32|regsvr32|cmstp|msiexec|wscript|cscript|forfiles|pcalua"}},
-            {"tool": "score_generic", "args": {"indicators_found": "$step5", "high_severity_count": "$step5", "medium_severity_count": 0}},
+            {"tool": "detect_powershell_obfuscation", "args": {"siem_event": "$siem_event"}},
             {"tool": "correlate_with_history", "args": {"ioc_values": "$step2", "lookback_hours": 48, "history_context": "$correlation_context"}},
-            {"tool": "map_mitre", "args": {"technique_ids": ["T1218", "T1218.001", "T1218.005", "T1218.010", "T1218.011"]}}
+            {"tool": "map_mitre", "args": {"technique_ids": ["T1218", "T1218.001", "T1218.005", "T1218.010", "T1218.011", "T1059.001", "T1027"]}}
         ]
     },
     "process_injection": {
@@ -272,11 +271,10 @@
         "description": "Detect obfuscated PowerShell execution including encoded commands, IEX cradles, download cradles, and AMSI bypass attempts",
         "plan": [
             {"tool": "parse_windows_event", "args": {"raw_log": "$raw_log"}},
+            {"tool": "detect_powershell_obfuscation", "args": {"siem_event": "$siem_event"}},
             {"tool": "check_base64", "args": {"text": "$raw_log"}},
             {"tool": "detect_encoding", "args": {"text": "$raw_log"}},
-            {"tool": "count_pattern", "args": {"text": "$raw_log", "pattern": "(?i)-enc|-encodedcommand|IEX|Invoke-Expression|Net\\.WebClient|DownloadString|FromBase64|bypass|amsi|ScriptBlock"}},
             {"tool": "detect_lolbin_abuse", "args": {"siem_event": "$siem_event"}},
-            {"tool": "score_generic", "args": {"indicators_found": "$step4", "high_severity_count": "$step4", "medium_severity_count": 0}},
             {"tool": "correlate_with_history", "args": {"ioc_values": [], "lookback_hours": 48, "history_context": "$correlation_context"}},
             {"tool": "map_mitre", "args": {"technique_ids": ["T1059.001", "T1027", "T1140"]}}
         ]

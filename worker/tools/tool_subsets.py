@@ -89,7 +89,7 @@ TOOL_SUBSETS = {
     ],
     "lolbin_abuse": [
         "parse_windows_event", "extract_ipv4", "extract_urls",
-        "detect_lolbin_abuse", "count_pattern", "score_generic",
+        "detect_lolbin_abuse", "detect_powershell_obfuscation",
         "correlate_with_history", "map_mitre",
     ],
     "process_injection": [
@@ -113,8 +113,9 @@ TOOL_SUBSETS = {
         "correlate_with_history", "map_mitre",
     ],
     "powershell_obfuscation": [
-        "parse_windows_event", "check_base64", "detect_encoding",
-        "count_pattern", "detect_lolbin_abuse", "score_generic",
+        "parse_windows_event", "detect_powershell_obfuscation",
+        "check_base64", "detect_encoding",
+        "detect_lolbin_abuse",
         "correlate_with_history", "map_mitre",
     ],
     "credential_access": [
