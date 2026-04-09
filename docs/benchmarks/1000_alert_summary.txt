@@ -1,0 +1,57 @@
+=== 1000-Alert Benchmark Summary (2026-04-09) ===
+Job: c6140bb5-832c-4666-9e2c-7615263e5650
+Config: 1000 alerts, 70/30 attack/benign, novelty 20%, campaign mode, 2/sec
+
+=== VERDICT DISTRIBUTION ===
+    verdict    | count | avg_risk 
+---------------+-------+----------
+ true_positive |   559 |     95.5
+ benign        |   314 |      2.6
+(2 rows)
+
+
+=== PER-TYPE STATS ===
+     task_type     | count | avg_risk | min_risk | max_risk | avg_sec 
+-------------------+-------+----------+----------+----------+---------
+ brute_force       |    50 |     95.0 |       95 |       95 |   464.3
+ c2_communication  |    51 |    100.0 |      100 |      100 |   413.7
+ data_exfiltration |    48 |    100.0 |      100 |      100 |   337.2
+ golden_ticket     |    49 |    100.0 |      100 |      100 |   352.4
+ health_check      |    46 |      0.0 |        0 |        0 |   314.4
+ kerberoasting     |    53 |    100.0 |      100 |      100 |   395.0
+ lateral_movement  |   104 |    100.0 |      100 |      100 |   380.2
+ lolbin_abuse      |   106 |     55.9 |       15 |      100 |   420.4
+ password_change   |    56 |      0.0 |        0 |        0 |   372.4
+ phishing          |   104 |     78.1 |       70 |       85 |   440.8
+ ransomware        |    49 |    100.0 |      100 |      100 |   407.6
+ scheduled_backup  |    55 |      0.0 |        0 |        0 |   344.2
+ user_login        |    58 |      0.0 |        0 |        0 |   351.5
+ windows_update    |    44 |      0.0 |        0 |        0 |   417.3
+(14 rows)
+
+
+=== STATUS BREAKDOWN (incl. orphans) ===
+  status   | count 
+-----------+-------
+ completed |   873
+ pending   |   127
+(2 rows)
+
+
+=== LATENCY PERCENTILES ===
+  n  | avg_s |  p50  |  p95  |  p99  | max_s 
+-----+-------+-------+-------+-------+-------
+ 873 | 391.3 | 428.1 | 667.1 | 724.6 |   772
+(1 row)
+
+
+=== HEADLINE METRICS ===
+Detection rate: 91.0% (559/614 attacks)
+Benign FP rate: 0.0% (0/259 clean benign)
+Separation gap: 88.3 points
+Total submitted: 1000
+Completed: 873 (127 orphaned by L3 backpressure)
+Errors: 0, dedup: 0, validation failures: 0
+
+Note: 55/106 lolbin_abuse alerts scored 15 (PowerShell -enc gap).
+This was the trigger to add detect_powershell_obfuscation (commit 66ce385).
