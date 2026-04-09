@@ -5,7 +5,7 @@ alerts for task types with insufficient data. Outputs test_alerts.json.
 
 Usage:
     python autoresearch/templates/setup_test_alerts.py \
-        --db-url postgresql://zovark:hydra_dev_2026@localhost:5432/zovark
+        --db-url postgresql://zovark:zovark_dev_2026@localhost:5432/zovark
 
     If no database access, generates synthetic-only:
     python autoresearch/templates/setup_test_alerts.py --synthetic-only
@@ -317,7 +317,7 @@ def extract_from_db(db_url: str) -> dict:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--db-url", default=os.getenv("DATABASE_URL",
-        "postgresql://zovark:hydra_dev_2026@localhost:5432/zovark"))
+        "postgresql://zovark:zovark_dev_2026@localhost:5432/zovark"))
     parser.add_argument("--synthetic-only", action="store_true")
     parser.add_argument("--output", default=os.path.join(
         os.path.dirname(__file__), "test_alerts.json"))

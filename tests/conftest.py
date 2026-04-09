@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'worker'))
 API_URL = os.getenv("ZOVARK_TEST_API", "http://localhost:8090")
 TEST_EMAIL = os.getenv("ZOVARK_TEST_EMAIL", "admin@test.local")
 TEST_PASSWORD = os.getenv("ZOVARK_TEST_PASSWORD", "TestPass2026")
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "hydra-redis-dev-2026")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD", "zovark_valkey_dev_2026")
 
 
 @pytest.fixture(scope="session")
@@ -36,7 +36,7 @@ def api_token():
 def flush_dedup():
     try:
         subprocess.run(
-            ["docker", "compose", "exec", "-T", "redis", "redis-cli",
+            ["docker", "compose", "exec", "-T", "valkey", "valkey-cli",
              "-a", REDIS_PASSWORD, "--no-auth-warning",
              "EVAL", "local keys = redis.call('keys', 'dedup:*'); for _,k in ipairs(keys) do redis.call('del', k) end; return #keys", "0"],
             capture_output=True, text=True, timeout=5

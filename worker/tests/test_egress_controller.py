@@ -72,7 +72,8 @@ class TestValidateURLInternal:
     @pytest.mark.parametrize("url", [
         "http://zovark-inference:8080/v1/chat/completions",
         "http://postgres:5432",
-        "http://redis:6379",
+        "http://valkey:6379",
+        "http://redis:6379",  # legacy alias kept in NO_PROXY allowlist
         "http://temporal:7233",
         "http://minio:9000",
         "http://nats:4222",

@@ -7,7 +7,7 @@ MSYS_NO_PATHCONV=1
 export MSYS_NO_PATHCONV
 
 API="http://localhost:8090"
-REDIS_PW="hydra-redis-dev-2026"
+REDIS_PW="zovark_valkey_dev_2026"
 PASS=0
 FAIL=0
 SKIP=0
@@ -67,7 +67,7 @@ poll_verdict() {
 # ── Flush dedup cache ──
 echo ""
 echo "Flushing dedup cache for clean test..."
-docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning EVAL "
+docker compose exec -T valkey valkey-cli -a "$REDIS_PW" --no-auth-warning EVAL "
   local keys = redis.call('KEYS','dedup:exact:*')
   for _,k in ipairs(keys) do redis.call('DEL',k) end
   return #keys
@@ -261,7 +261,7 @@ echo "-- CATEGORY 6: BATCH + DEDUP INTERACTION --"
 echo ""
 echo "TEST 13: 5 alerts same IP, escalating severity -> batch representative = critical"
 # Flush stale batch keys from earlier tests so we only read our own
-docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning EVAL "
+docker compose exec -T valkey valkey-cli -a "$REDIS_PW" --no-auth-warning EVAL "
   local keys = redis.call('KEYS','apibatch:*')
   for _,k in ipairs(keys) do redis.call('DEL',k) end
   return #keys
@@ -274,14 +274,14 @@ done
 # Compute the exact batch key: SHA-256 of "brute_force:10.200.8.1", first 16 hex chars
 BATCH_HASH=$(echo -n "brute_force:10.200.8.1" | sha256sum | cut -c1-16)
 BKEY="apibatch:src:$BATCH_HASH"
-BATCH_SEV=$(docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning HGET "$BKEY" "severity" 2>/dev/null | tr -d '\r\n ')
+BATCH_SEV=$(docker compose exec -T valkey valkey-cli -a "$REDIS_PW" --no-auth-warning HGET "$BKEY" "severity" 2>/dev/null | tr -d '\r\n ')
 if [ "$BATCH_SEV" = "critical" ]; then log_pass "Batch promoted to critical severity"
 elif [ -n "$BATCH_SEV" ]; then log_fail "Batch severity is '$BATCH_SEV' (expected critical)"
 else
   # Fallback: scan all batch keys in case hash computation differs
-  BSEV=$(docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning KEYS "apibatch:src:*" 2>/dev/null | tr -d '\r' | head -1)
+  BSEV=$(docker compose exec -T valkey valkey-cli -a "$REDIS_PW" --no-auth-warning KEYS "apibatch:src:*" 2>/dev/null | tr -d '\r' | head -1)
   if [ -n "$BSEV" ]; then
-    BATCH_SEV=$(docker compose exec -T redis valkey-cli -a "$REDIS_PW" --no-auth-warning HGET "$BSEV" "severity" 2>/dev/null | tr -d '\r\n ')
+    BATCH_SEV=$(docker compose exec -T valkey valkey-cli -a "$REDIS_PW" --no-auth-warning HGET "$BSEV" "severity" 2>/dev/null | tr -d '\r\n ')
     if [ "$BATCH_SEV" = "critical" ]; then log_pass "Batch promoted to critical severity"
     elif [ -n "$BATCH_SEV" ]; then log_fail "Batch severity is '$BATCH_SEV' (expected critical)"
     else log_skip "Could not read batch severity"; fi

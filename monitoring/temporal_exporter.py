@@ -34,7 +34,7 @@ except ImportError:
     HAS_PSYCOPG2 = False
 
 TEMPORAL_ADDRESS = os.environ.get("TEMPORAL_ADDRESS", "temporal:7233")
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@postgres:5432/zovark")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@postgres:5432/zovark")
 PORT = int(os.environ.get("EXPORTER_PORT", "9092"))
 
 # Cached metrics

@@ -8,7 +8,7 @@ services:
     container_name: zovark-test-postgres
     environment:
       POSTGRES_USER: zovark
-      POSTGRES_PASSWORD: hydra_dev_2026
+      POSTGRES_PASSWORD: zovark_dev_2026
       POSTGRES_DB: zovark
     volumes:
       - ../../init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
@@ -43,7 +43,7 @@ services:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=zovark
-      - POSTGRES_PWD=hydra_dev_2026
+      - POSTGRES_PWD=zovark_dev_2026
       - POSTGRES_SEEDS=postgres
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
     volumes:
@@ -80,7 +80,7 @@ services:
       - "8091:8090"
     environment:
       - PORT=8090
-      - DATABASE_URL=postgresql://zovark:hydra_dev_2026@postgres:5432/zovark
+      - DATABASE_URL=postgresql://zovark:zovark_dev_2026@postgres:5432/zovark
       - TEMPORAL_ADDRESS=temporal:7233
       - ZOVARK_LLM_KEY=sk-zovark-dev-2026
       - JWT_SECRET=zovark-jwt-secret-dev-2026
@@ -100,7 +100,7 @@ services:
       dockerfile: Dockerfile
     container_name: zovark-test-worker
     environment:
-      - DATABASE_URL=postgresql://zovark:hydra_dev_2026@postgres:5432/zovark
+      - DATABASE_URL=postgresql://zovark:zovark_dev_2026@postgres:5432/zovark
       - TEMPORAL_ADDRESS=temporal:7233
       - ZOVARK_LLM_ENDPOINT=http://mock-llm:4000/v1/chat/completions
       - ZOVARK_LLM_KEY=sk-zovark-dev-2026

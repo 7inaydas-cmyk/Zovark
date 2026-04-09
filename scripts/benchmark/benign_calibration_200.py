@@ -82,7 +82,7 @@ print(f"\nAll 200 submitted ({errors} errors). Waiting for processing...\n")
 
 # Poll DB directly via psycopg2 (available in worker container)
 import psycopg2
-conn = psycopg2.connect("postgresql://zovark:hydra_dev_2026@postgres:5432/zovark")
+conn = psycopg2.connect("postgresql://zovark:zovark_dev_2026@postgres:5432/zovark")
 
 for elapsed in range(30, 901, 30):
     time.sleep(30)

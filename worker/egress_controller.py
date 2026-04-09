@@ -26,8 +26,8 @@ ALLOWED_DOMAINS = {
 
 # Internal services that bypass the proxy
 NO_PROXY_HOSTS = {
-    "postgres", "redis", "temporal", "minio",
-    "nats", "jaeger", "embedding-server", "localhost",
+    "postgres", "valkey", "redis",  # redis kept as legacy alias
+    "temporal", "minio", "nats", "jaeger", "embedding-server", "localhost",
     "zovark-api", "pgbouncer", "zovark-inference",
 }
 

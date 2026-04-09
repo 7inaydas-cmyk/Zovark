@@ -113,7 +113,7 @@ class RedisCollector:
     """Collects dedup/burst stats from Valkey via redis-py."""
 
     def __init__(self):
-        redis_url = os.environ.get("REDIS_URL", "redis://:hydra-redis-dev-2026@redis:6379/0")
+        redis_url = os.environ.get("REDIS_URL", "redis://:zovark_valkey_dev_2026@redis:6379/0")
         try:
             import redis
             self.r = redis.from_url(redis_url, decode_responses=True)

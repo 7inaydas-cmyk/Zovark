@@ -30,7 +30,7 @@ try:
 except ImportError:
     HAS_REDIS = False
 
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@postgres:5432/zovark")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@postgres:5432/zovark")
 REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
 PORT = int(os.environ.get("METRICS_PORT", "9093"))
 

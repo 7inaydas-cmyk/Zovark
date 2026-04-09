@@ -26,7 +26,7 @@ def main():
     group.add_argument('--task-id', type=str, help='Task UUID')
     parser.add_argument('--db-url', type=str,
                         default=os.getenv('DATABASE_URL',
-                        'postgresql://zovark:hydra_dev_2026@localhost:5432/zovark'))
+                        'postgresql://zovark:zovark_dev_2026@localhost:5432/zovark'))
     args = parser.parse_args()
 
     import psycopg2
