@@ -140,6 +140,18 @@ func getTenantRateLimits(ctx context.Context, tenantID string) (perMinute int, p
 // tenantRateLimitMiddleware enforces per-tenant rate limiting using Redis sliding windows.
 func tenantRateLimitMiddleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
+		// Internal bypass: Forge (and other admin-authorized internal
+		// load generators) set this header to skip rate limiting. The
+		// admin JWT must still be valid — this is authorization, not
+		// authentication. Without this, benchmark runs get silently 429'd.
+		// NOTE: middleware sets "user_role" not "role" (see middleware.go:105)
+		if c.GetHeader("X-Zovark-Internal") == "forge" {
+			if role, _ := c.Get("user_role"); role == "admin" {
+				c.Next()
+				return
+			}
+		}
+
 		tenantID, exists := c.Get("tenant_id")
 		if !exists {
 			c.Next()

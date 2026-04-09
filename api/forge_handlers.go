@@ -382,6 +382,8 @@ func runForgeJob(ctx context.Context, job *ForgeJob, token string) {
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Authorization", "Bearer "+token)
+		// Bypass tenant rate limiter — internal load generator
+		req.Header.Set("X-Zovark-Internal", "forge")
 
 		resp, err := httpClient.Do(req)
 		if err != nil {
@@ -398,6 +400,21 @@ func runForgeJob(ctx context.Context, job *ForgeJob, token string) {
 		respBody, _ := io.ReadAll(resp.Body)
 		resp.Body.Close()
 		json.Unmarshal(respBody, &result)
+
+		// Non-2xx responses are errors (rate limit 429, backpressure 503,
+		// validation 400, etc.). Without this check, the old code silently
+		// treated rate-limited alerts as "submitted" but never tracked them.
+		if resp.StatusCode >= 400 {
+			job.mu.Lock()
+			job.Results.ErrorCount++
+			if len(job.Results.Errors) < 10 {
+				job.Results.Errors = append(job.Results.Errors,
+					fmt.Sprintf("HTTP %d: %s", resp.StatusCode, string(respBody)[:min(200, len(respBody))]))
+			}
+			job.mu.Unlock()
+			time.Sleep(interval)
+			continue
+		}
 
 		// Extract task ID from various response formats
 		taskID := ""

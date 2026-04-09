@@ -38,6 +38,15 @@
 - 0 validation failures, 0 benign FP, 0 cascade timeouts
 - 2 pending: Path C 500 from ROG (fail-closed edge case)
 
+## 1000-Alert Results (4 bugs fixed)
+- 1000 submitted, 999 unique (dedup_count=1), 0 HTTP errors
+- 197 completed before backpressure hard limit kicked in
+- Verdicts (197): 135 TP avg 95.4, 61 benign avg 0.0, 1 Path C needs_review
+- 0% benign FP (0/61), 100% attack classification accuracy
+- Path C unusual_network_traffic: risk=100, completed (was timeout)
+- See docs/BENCHMARK_1000_ALERT_v2.md
+- Bug 4 discovered: rate limiter + silent Forge 429s → `X-Zovark-Internal: forge` bypass
+
 ## Sprint C — COMPLETE
 - C1: Remediation engine — DONE
 - C2: Copilot API — DONE
