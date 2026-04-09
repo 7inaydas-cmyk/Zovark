@@ -44,6 +44,12 @@ func initNATS() *NATSClient {
 	if strings.HasPrefix(addr, "nats://") {
 		addr = addr[7:]
 	}
+	// Strip user:password@ prefix — this minimal client doesn't auth.
+	// NATS itself isn't running in the dev stack; if NATS is enabled
+	// later, replace this with a proper nats.go client.
+	if at := strings.Index(addr, "@"); at >= 0 {
+		addr = addr[at+1:]
+	}
 
 	client := &NATSClient{
 		url: addr,

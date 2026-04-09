@@ -1,4 +1,4 @@
--- Hydra MVP Database Schema
+-- Zovark Database Schema
 -- Version: 1.3.0
 -- 21 base tables + entity graph + sprint extensions + shadow mode (v0.10.0), views, append-only enforcement
 
@@ -130,23 +130,11 @@ CREATE TABLE agent_task_steps (
 );
 
 -- ============================================================
--- MEMORY (Episodic + Semantic via pgvector + Investigation Memory)
+-- MEMORY (Episodic + Semantic via pgvector)
 -- ============================================================
-
-CREATE TABLE investigation_memory (
-    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-    tenant_id UUID NOT NULL REFERENCES tenants(id),
-    task_id UUID NOT NULL REFERENCES agent_tasks(id),
-    skill_used_id UUID REFERENCES agent_skills(id),
-    threat_type VARCHAR(100),
-    memory_summary TEXT NOT NULL,
-    key_findings JSONB NOT NULL,
-    key_iocs JSONB,
-    risk_score INTEGER,
-    effective_patterns TEXT[],
-    embedding vector(768),
-    created_at TIMESTAMPTZ DEFAULT NOW()
-);
+-- Note: investigation_memory table is created by migration 045
+-- (current schema). The legacy table that lived here was removed
+-- on 2026-04-10 because it conflicted with the migrated schema.
 
 CREATE TABLE agent_memory_episodic (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -409,7 +397,7 @@ GROUP BY t.id, tn.name;
 -- ============================================================
 
 INSERT INTO tenants (name, slug, tier) VALUES
-    ('Hydra Dev', 'hydra-dev', 'enterprise')
+    ('Zovark Dev', 'zovark-dev', 'enterprise')
 ON CONFLICT (slug) DO NOTHING;
 
 -- ============================================================
