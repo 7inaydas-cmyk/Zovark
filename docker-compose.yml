@@ -40,23 +40,23 @@ services:
       - zovark-internal
 
   # ─── CACHE / WORKING MEMORY (Valkey — BSD license, Redis API-compatible) ───
-  redis:
+  valkey:
     image: valkey/valkey:7-alpine
-    container_name: zovark-redis
+    container_name: zovark-valkey
     command: >
       valkey-server
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD:-zovark-redis-dev-2026}
+      --requirepass ${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
       --rename-command FLUSHALL ""
       --rename-command CONFIG ""
       --rename-command DEBUG ""
     volumes:
-      - redis_data:/data
+      - valkey_data:/data
     expose:
       - "6379"
     healthcheck:
-      test: ["CMD", "valkey-cli", "-a", "${REDIS_PASSWORD:-zovark-redis-dev-2026}", "ping"]
+      test: ["CMD", "valkey-cli", "-a", "${VALKEY_PASSWORD:-zovark_valkey_dev_2026}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -248,9 +248,13 @@ services:
       - TEMPORAL_ADDRESS=temporal:7233
       - ZOVARK_LLM_KEY=${ZOVARK_LLM_KEY:-sk-zovark-dev-2026}
       - JWT_SECRET=${JWT_SECRET:-zovark-jwt-secret-dev-2026-CHANGE-ME-IN-PRODUCTION-min-32-chars}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-zovark-redis-dev-2026}@redis:6379/0
-      - REDIS_PASSWORD=${REDIS_PASSWORD:-zovark-redis-dev-2026}
-      - NATS_URL=nats://${NATS_USER:-zovark}:${NATS_PASSWORD:-zovark-nats-dev-2026}@zovark-nats:4222
+      # Valkey is Redis-API-compatible — env var names use VALKEY_* but URL scheme stays redis://
+      - VALKEY_URL=redis://:${VALKEY_PASSWORD:-zovark_valkey_dev_2026}@valkey:6379/0
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
+      # Legacy aliases — kept for code that still reads REDIS_*
+      - REDIS_URL=redis://:${VALKEY_PASSWORD:-zovark_valkey_dev_2026}@valkey:6379/0
+      - REDIS_PASSWORD=${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
+      - NATS_URL=nats://${NATS_USER:-zovark}:${NATS_PASSWORD:-zovark_nats_dev_2026}@zovark-nats:4222
       - ZOVARK_ENCRYPTION_KEY=${ZOVARK_ENCRYPTION_KEY:-}
       - ZOVARK_WORKFLOW_VERSION=${ZOVARK_WORKFLOW_VERSION:-InvestigationWorkflowV2}
       # LLM endpoint for OOB inference health check
@@ -284,7 +288,12 @@ services:
       - ZOVARK_LLM_ENDPOINT_FAST=${ZOVARK_LLM_ENDPOINT_FAST:-http://zovark-inference:8080/v1/chat/completions}
       - ZOVARK_LLM_ENDPOINT_CODE=${ZOVARK_LLM_ENDPOINT_CODE:-http://zovark-inference:8080/v1/chat/completions}
       - ZOVARK_LLM_KEY=${ZOVARK_LLM_KEY:-sk-zovark-dev-2026}
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-zovark-redis-dev-2026}@redis:6379/0
+      - VALKEY_URL=redis://:${VALKEY_PASSWORD:-zovark_valkey_dev_2026}@valkey:6379/0
+      - VALKEY_PASSWORD=${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
+      - ZOVARK_VALKEY_PASSWORD=${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
+      # Legacy aliases — kept for code that still reads REDIS_*
+      - REDIS_URL=redis://:${VALKEY_PASSWORD:-zovark_valkey_dev_2026}@valkey:6379/0
+      - REDIS_PASSWORD=${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
       - HOST_SANDBOX_DIR=${PWD}/sandbox
       - ZOVARK_MODEL_FAST=${ZOVARK_MODEL_FAST:-gemma-4-e4b-it}
       - ZOVARK_MODEL_CODE=${ZOVARK_MODEL_CODE:-gemma-4-e4b-it}
@@ -299,11 +308,11 @@ services:
       - ZOVARK_PARALLEL_TOOLS_ENABLED=${ZOVARK_PARALLEL_TOOLS_ENABLED:-false}
       - ZOVARK_MAX_PARALLEL_TOOLS=${ZOVARK_MAX_PARALLEL_TOOLS:-4}
       - PYTHONUNBUFFERED=1
-      - NATS_URL=nats://${NATS_USER:-zovark}:${NATS_PASSWORD:-zovark-nats-dev-2026}@zovark-nats:4222
+      - NATS_URL=nats://${NATS_USER:-zovark}:${NATS_PASSWORD:-zovark_nats_dev_2026}@zovark-nats:4222
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - HTTP_PROXY=http://squid-proxy:3128
       - HTTPS_PROXY=http://squid-proxy:3128
-      - NO_PROXY=postgres,redis,temporal,minio,nats,embedding-server,localhost,zovark-api,pgbouncer,host.docker.internal,api,docker-socket-proxy,zovark-signoz-collector,zovark-clickhouse,zovark-inference,rog-inference,100.100.79.83
+      - NO_PROXY=postgres,valkey,redis,temporal,minio,nats,embedding-server,localhost,zovark-api,pgbouncer,host.docker.internal,api,docker-socket-proxy,zovark-signoz-collector,zovark-clickhouse,zovark-inference,rog-inference,100.100.79.83
     extra_hosts:
       - "rog-inference:${ROG_INFERENCE_IP:-100.100.79.83}"
     volumes:
@@ -468,16 +477,17 @@ services:
     networks:
       - zovark-internal
 
-  redis-exporter:
+  valkey-exporter:
+    # oliver006/redis_exporter is API-compatible with Valkey
     image: oliver006/redis_exporter:v1.58.0
-    container_name: zovark-redis-exporter
+    container_name: zovark-valkey-exporter
     environment:
-      REDIS_ADDR: redis://redis:6379
-      REDIS_PASSWORD: ${REDIS_PASSWORD:-zovark-redis-dev-2026}
+      REDIS_ADDR: redis://valkey:6379
+      REDIS_PASSWORD: ${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
     ports:
       - "9121:9121"
     depends_on:
-      redis:
+      valkey:
         condition: service_healthy
     profiles: ["monitoring"]
     deploy:
@@ -496,7 +506,8 @@ services:
     command: python /app/monitoring/worker_metrics.py
     environment:
       - DATABASE_URL=postgresql://zovark:${POSTGRES_PASSWORD:-zovark_dev_2026}@postgres:5432/zovark
-      - REDIS_URL=redis://:${REDIS_PASSWORD:-zovark-redis-dev-2026}@redis:6379/0
+      - VALKEY_URL=redis://:${VALKEY_PASSWORD:-zovark_valkey_dev_2026}@valkey:6379/0
+      - REDIS_URL=redis://:${VALKEY_PASSWORD:-zovark_valkey_dev_2026}@valkey:6379/0
       - METRICS_PORT=9093
     volumes:
       - ./monitoring:/app/monitoring:ro
@@ -636,9 +647,11 @@ services:
       - HEALER_CHECK_INTERVAL=30
       # Aligned with worker/settings.py ZOVARK_ prefix
       - ZOVARK_DB_USER=${POSTGRES_USER:-zovark}
-      - ZOVARK_DB_PASSWORD=${POSTGRES_PASSWORD:-hydra_dev_2026}
+      - ZOVARK_DB_PASSWORD=${POSTGRES_PASSWORD:-zovark_dev_2026}
       - ZOVARK_DB_NAME=${POSTGRES_DB:-zovark}
-      - ZOVARK_REDIS_PASSWORD=${REDIS_PASSWORD:-hydra-redis-dev-2026}
+      - ZOVARK_VALKEY_PASSWORD=${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
+      # Legacy alias
+      - ZOVARK_REDIS_PASSWORD=${VALKEY_PASSWORD:-zovark_valkey_dev_2026}
       - ZOVARK_LLM_FAST_MODEL=${ZOVARK_MODEL_FAST:-gemma-4-e4b-it}
       - ZOVARK_LLM_BASE_URL=${ZOVARK_LLM_BASE_URL:-http://zovark-inference:8080}
       - ZOVARK_OTEL_ENABLED=${OTEL_ENABLED:-false}
@@ -736,7 +749,7 @@ services:
         soft: 262144
         hard: 262144
 
-  # Schema migration (run once): docker run --rm --network hydra-mvp_zovark-internal signoz/signoz-schema-migrator:0.111.16 --dsn "tcp://zovark-clickhouse:9000" sync
+  # Schema migration (run once): docker run --rm --network zovark_zovark-internal signoz/signoz-schema-migrator:0.111.16 --dsn "tcp://zovark-clickhouse:9000" sync
 
   zovark-signoz-collector:
     image: signoz/signoz-otel-collector:0.111.16
@@ -795,7 +808,7 @@ networks:
 # ─── VOLUMES ───────────────────────────────────────────
 volumes:
   postgres_data:
-  redis_data:
+  valkey_data:
   minio_data:
   ollama_data:
   prometheus_data:

@@ -11,7 +11,7 @@ services:
     container_name: zovark-postgres
     environment:
       POSTGRES_USER: zovark
-      POSTGRES_PASSWORD: hydra_dev_2026
+      POSTGRES_PASSWORD: zovark_dev_2026
       POSTGRES_DB: zovark
     volumes:
       - postgres_data:/var/lib/postgresql/data
@@ -33,7 +33,7 @@ services:
     container_name: zovark-redis
     command: redis-server --maxmemory 256mb --maxmemory-policy allkeys-lru
     volumes:
-      - redis_data:/data
+      - valkey_data:/data
     restart: unless-stopped
     networks:
       - zovark-net
@@ -46,7 +46,7 @@ services:
       - DB=postgres12
       - DB_PORT=5432
       - POSTGRES_USER=zovark
-      - POSTGRES_PWD=hydra_dev_2026
+      - POSTGRES_PWD=zovark_dev_2026
       - POSTGRES_SEEDS=postgres
       - DYNAMIC_CONFIG_FILE_PATH=config/dynamicconfig/development-sql.yaml
     depends_on:
@@ -95,7 +95,7 @@ services:
     command: --config /app/config.yaml --port 4000
     environment:
       - LITELLM_MASTER_KEY=sk-zovark-local
-      - DATABASE_URL=postgresql://zovark:hydra_dev_2026@postgres:5432/zovark
+      - DATABASE_URL=postgresql://zovark:zovark_dev_2026@postgres:5432/zovark
       - OPENROUTER_API_KEY=not-needed
     volumes:
       - ./litellm_config.yaml:/app/config.yaml:ro
@@ -120,7 +120,7 @@ services:
       - "8090:8090"
     environment:
       - PORT=8090
-      - DATABASE_URL=postgresql://zovark:hydra_dev_2026@postgres:5432/zovark
+      - DATABASE_URL=postgresql://zovark:zovark_dev_2026@postgres:5432/zovark
       - TEMPORAL_ADDRESS=temporal:7233
       - LITELLM_MASTER_KEY=sk-zovark-local
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
@@ -139,7 +139,7 @@ services:
     image: zovark-mvp-worker:latest
     # No container_name — allows docker compose --scale worker=N
     environment:
-      - DATABASE_URL=postgresql://zovark:hydra_dev_2026@postgres:5432/zovark
+      - DATABASE_URL=postgresql://zovark:zovark_dev_2026@postgres:5432/zovark
       - TEMPORAL_ADDRESS=temporal:7233
       - ZOVARK_LLM_ENDPOINT=http://litellm:4000/v1/chat/completions
       - ZOVARK_LLM_KEY=sk-zovark-local
@@ -173,4 +173,4 @@ networks:
 
 volumes:
   postgres_data:
-  redis_data:
+  valkey_data:

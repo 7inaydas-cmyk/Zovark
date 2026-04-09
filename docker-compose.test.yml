@@ -31,4 +31,4 @@ services:
 networks:
   zovark-internal:
     external: true
-    name: hydra-mvp_zovark-internal
+    name: zovark_zovark-internal
