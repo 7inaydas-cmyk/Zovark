@@ -68,14 +68,19 @@ def _load_grammar(name: str) -> str | None:
 
 # --- LLM output sanitizer (model-agnostic, defense in depth) ---
 # Strips control tokens that may leak into grammar-constrained output.
-# Covers Gemma 4 thinking blocks, tool call corruption (llama.cpp #21316),
-# and turn markers. No-op on models that don't emit these tokens.
+# Gemma 4 26B thinking tokens can leak INSIDE JSON string values when using
+# GBNF grammar (because `<`, `c`, `h` etc. are valid string characters and
+# the grammar doesn't constrain content inside string values).
+# Observed corruption: `<channel|>thought\n<channel|>...` inside JSON strings.
 _CONTROL_TOKEN_RE = re.compile(
-    r'<\|channel>.*?<channel\|>'   # Gemma 4 thinking blocks
-    r'|<\|think\|>'                # thinking trigger token
-    r'|\[<\|"\|>\]'               # tool call corruption (issue #21316)
-    r'|<\|turn\|>'                 # turn markers that leak
-    r'|<\|"\|>',                   # quote token corruption
+    r'<channel\|>[^"]*?<channel\|>'      # Gemma 4 paired channel thinking (inside strings)
+    r'|<channel\|>[^"]*'                 # Unpaired channel markers (cleanup tail)
+    r'|<\|channel>.*?<channel\|>'        # Legacy format (kept for compat)
+    r'|<think>.*?</think>'               # <think> tags (some Gemma variants)
+    r'|<\|think\|>'                      # Thinking trigger token
+    r'|\[<\|"\|>\]'                      # Tool call corruption (llama.cpp issue #21316)
+    r'|<\|turn\|>'                       # Turn markers
+    r'|<\|"\|>',                         # Quote token corruption
     re.DOTALL
 )
 

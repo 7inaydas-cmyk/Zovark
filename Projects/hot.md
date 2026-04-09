@@ -10,7 +10,7 @@
 - Content scanner: 87 patterns, signal boost: 11
 - FAST: Gemma 4 E4B (local, llama-server, ~30 tok/s)
 - CODE: Gemma 4 26B-A4B (ROG 100.100.79.83, llama-server, 77 tok/s)
-- Path C: WORKING — 7s for novel types (was: timeout on 4B)
+- Path C: WORKING with REAL verdicts — risk=100 completed (was: risk=0 timeout)
 - Benign: 0-2s, 0% FP (skips LLM entirely)
 - Entity graph: 213 entities, 243 edges
 
@@ -23,9 +23,10 @@
 - Gemma 4 thinking: reasoning_effort=none for prose, thinking enabled for GBNF grammar
 
 ## Known Issues
-- GBNF + thinking tokens: some Path C alerts produce control characters in JSON (edge case)
 - CODE semaphore(1): serializes 26B requests — last alert in burst waits ~150s
+- Store stage: rare race where Temporal workflow completes but DB row stays pending
 - assess summary timeout raised to 90s (was 45s)
+- FIXED 2026-04-09: GBNF + thinking tokens — sanitizer strips <channel|>...<channel|>
 
 ## Sprint C — COMPLETE
 - C1: Remediation engine — DONE
