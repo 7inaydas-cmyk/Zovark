@@ -22,7 +22,7 @@ try:
     from settings import settings as _settings
     _DB_URL = os.environ.get("DATABASE_URL", _settings.database_url)
 except ImportError:
-    _DB_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@pgbouncer:5432/zovark")
+    _DB_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@pgbouncer:5432/zovark")
 
 
 def emit_event(

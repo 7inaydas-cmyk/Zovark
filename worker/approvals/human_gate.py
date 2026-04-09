@@ -28,7 +28,7 @@ def _get_redis():
     """Get Redis connection."""
     try:
         import redis
-        url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+        url = os.environ.get("VALKEY_URL") or os.environ.get("REDIS_URL", "redis://valkey:6379/0")
         return redis.from_url(url, decode_responses=True)
     except Exception:
         return None

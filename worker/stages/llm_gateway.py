@@ -17,7 +17,7 @@ try:
     DATABASE_URL = os.environ.get("DATABASE_URL", _settings.database_url)
 except ImportError:
     ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", "sk-zovark-dev-2026")
-    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@pgbouncer:5432/zovark")
+    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@pgbouncer:5432/zovark")
 
 # Two-model routing: Gemma 4 E4B (dev: same model both roles, customer: bigger CODE)
 # FAST: tool selection + param extraction (Path B/C)

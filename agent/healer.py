@@ -50,9 +50,17 @@ except ImportError:
 # Healer runs in its own container (no pydantic), so reads env vars directly.
 
 CHECK_INTERVAL = int(os.environ.get("HEALER_CHECK_INTERVAL", "30"))
-REDIS_PASSWORD = os.environ.get("ZOVARK_REDIS_PASSWORD", os.environ.get("REDIS_PASSWORD", "hydra-redis-dev-2026"))
+# Valkey password — checks new VALKEY_*, then legacy REDIS_*/ZOVARK_REDIS_* vars
+VALKEY_PASSWORD = (
+    os.environ.get("ZOVARK_VALKEY_PASSWORD")
+    or os.environ.get("VALKEY_PASSWORD")
+    or os.environ.get("ZOVARK_REDIS_PASSWORD")
+    or os.environ.get("REDIS_PASSWORD")
+    or "zovark_valkey_dev_2026"
+)
+REDIS_PASSWORD = VALKEY_PASSWORD  # legacy alias used elsewhere in this file
 POSTGRES_USER = os.environ.get("ZOVARK_DB_USER", os.environ.get("POSTGRES_USER", "zovark"))
-POSTGRES_PASSWORD = os.environ.get("ZOVARK_DB_PASSWORD", os.environ.get("POSTGRES_PASSWORD", "hydra_dev_2026"))
+POSTGRES_PASSWORD = os.environ.get("ZOVARK_DB_PASSWORD", os.environ.get("POSTGRES_PASSWORD", "zovark_dev_2026"))
 POSTGRES_DB = os.environ.get("ZOVARK_DB_NAME", os.environ.get("POSTGRES_DB", "zovark"))
 LLM_MODEL = os.environ.get("ZOVARK_LLM_FAST_MODEL", os.environ.get("ZOVARK_MODEL_FAST", "gemma-4-e4b-it"))
 LLM_HOST = os.environ.get("ZOVARK_LLM_BASE_URL", "http://zovark-inference:8080")
@@ -146,20 +154,24 @@ def emit_event(level: str, service: str, message: str, detail: str = ""):
 SERVICE_TYPE_MAP = {
     "zovark-api": "api",
     "zovark-postgres": "postgres",
-    "zovark-redis": "redis",
+    "zovark-valkey": "valkey",
+    "zovark-redis": "valkey",  # legacy alias
     "zovark-dashboard": "dashboard",
     "zovark-temporal": "temporal",
     "zovark-pgbouncer": "pgbouncer",
     "zovark-egress-proxy": "squid",
     "zovark-healer": "self",
-    # Signoz tracing stack (optional, --profile tracing)
-    "hydra-mvp-zovark-clickhouse-1": "signoz_clickhouse",
-    "hydra-mvp-zovark-signoz-collector-1": "signoz_collector",
-    "hydra-mvp-zovark-signoz-query-1": "signoz_query",
-    "hydra-mvp-zovark-signoz-frontend-1": "signoz_frontend",
+    # Signoz tracing stack (optional, --profile tracing).
+    # Compose v2 names: ${COMPOSE_PROJECT_NAME}-${SERVICE}-${INDEX}.
+    # Project = "zovark" → "zovark-zovark-clickhouse-1".
+    "zovark-zovark-clickhouse-1": "signoz_clickhouse",
+    "zovark-zovark-signoz-collector-1": "signoz_collector",
+    "zovark-zovark-signoz-query-1": "signoz_query",
+    "zovark-zovark-signoz-frontend-1": "signoz_frontend",
 }
 
-WORKER_PATTERN = re.compile(r"hydra-mvp[-_]worker[-_]\d+")
+# Worker pattern: matches both legacy hydra-mvp_worker_N and new zovark_worker_N
+WORKER_PATTERN = re.compile(r"(?:hydra-mvp|zovark)[-_]worker[-_]\d+")
 
 
 def classify_container(container_name: str) -> str:
@@ -293,21 +305,25 @@ def check_postgres(container_name: str) -> tuple[bool, str]:
         return False, str(e)[:200]
 
 
-def check_redis(container_name: str) -> tuple[bool, str]:
-    """Redis health check via docker exec + redis-cli."""
+def check_valkey(container_name: str) -> tuple[bool, str]:
+    """Valkey health check via docker exec + valkey-cli."""
     try:
         result = subprocess.run(
             ["docker", "exec", container_name,
-             "redis-cli", "-a", REDIS_PASSWORD, "ping"],
+             "valkey-cli", "-a", VALKEY_PASSWORD, "ping"],
             capture_output=True, text=True, timeout=10,
         )
         if result.returncode == 0 and "PONG" in result.stdout:
             return True, "PONG"
         return False, result.stderr.strip() or result.stdout.strip()
     except subprocess.TimeoutExpired:
-        return False, "redis-cli timeout"
+        return False, "valkey-cli timeout"
     except Exception as e:
         return False, str(e)[:200]
+
+
+# Backwards-compat alias — older callers use check_redis
+check_redis = check_valkey
 
 
 def check_temporal(container_name: str) -> tuple[bool, str]:
@@ -369,8 +385,8 @@ def health_check(svc: ServiceState) -> tuple[bool, str]:
             return check_http("http://zovark-dashboard:3000/")
         elif svc.svc_type == "postgres":
             return check_postgres(svc.container_name)
-        elif svc.svc_type == "redis":
-            return check_redis(svc.container_name)
+        elif svc.svc_type in ("valkey", "redis"):
+            return check_valkey(svc.container_name)
         elif svc.svc_type == "temporal":
             return check_container_running(svc.container_name)
         elif svc.svc_type == "inference":
@@ -440,8 +456,8 @@ def check_worker_stuck(svc: ServiceState):
 # ── Auto-Restart Escalation ───────────────────────────────────────────
 
 DEPENDENCY_MAP = {
-    "api": ["postgres", "pgbouncer", "temporal", "redis"],
-    "worker": ["postgres", "temporal", "redis"],
+    "api": ["postgres", "pgbouncer", "temporal", "valkey"],
+    "worker": ["postgres", "temporal", "valkey"],
     "pgbouncer": ["postgres"],
     "dashboard": ["api"],
 }

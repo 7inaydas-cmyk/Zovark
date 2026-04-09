@@ -344,7 +344,7 @@ try:
     from settings import settings as _settings_db
     DATABASE_URL = os.environ.get("DATABASE_URL", _settings_db.database_url)
 except ImportError:
-    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@pgbouncer:5432/zovark")
+    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@pgbouncer:5432/zovark")
 
 
 def _log_validation_failure(task_id: str, tenant_id: str, task_type: str, error_msg: str):

@@ -1,49 +1,12 @@
-import os
-import redis
+"""DEPRECATED: use valkey_client instead.
 
-_redis_conn = None
-
-
-def _get_redis():
-    global _redis_conn
-    if _redis_conn is None:
-        url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
-        _redis_conn = redis.from_url(url, decode_responses=True)
-    return _redis_conn
-
-
-def get_active_count(tenant_id: str) -> int:
-    r = _get_redis()
-    val = r.get(f"zovark:active:{tenant_id}")
-    return int(val) if val else 0
-
-
-def increment_active(tenant_id: str) -> int:
-    r = _get_redis()
-    key = f"zovark:active:{tenant_id}"
-    val = r.incr(key)
-    r.expire(key, 3600)  # 1 hour TTL safety net
-    return val
-
-
-def decrement_active(tenant_id: str) -> int:
-    r = _get_redis()
-    key = f"zovark:active:{tenant_id}"
-    val = r.decr(key)
-    if val < 0:
-        r.set(key, 0)
-        r.expire(key, 3600)
-        return 0
-    return val
-
-
-def check_rate_limit(tenant_id: str, max_concurrent: int) -> bool:
-    """Returns True if under limit, False if over."""
-    r = _get_redis()
-    key = f"zovark:active:{tenant_id}"
-    val = r.incr(key)
-    r.expire(key, 3600)
-    if val > max_concurrent:
-        r.decr(key)
-        return False
-    return True
+This shim re-exports from valkey_client so legacy `from redis_client
+import ...` still works without breaking anything.
+"""
+from valkey_client import (  # noqa: F401
+    _get_valkey as _get_redis,
+    get_active_count,
+    increment_active,
+    decrement_active,
+    check_rate_limit,
+)

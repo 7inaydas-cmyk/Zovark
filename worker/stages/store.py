@@ -19,11 +19,11 @@ try:
     from settings import settings as _settings
     DATABASE_URL = os.environ.get("DATABASE_URL", _settings.database_url)
 except ImportError:
-    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@pgbouncer:5432/zovark")
+    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@pgbouncer:5432/zovark")
 FAST_FILL = os.environ.get("ZOVARK_FAST_FILL", "false").lower() == "true"
 
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://:zovark-redis-dev-2026@redis:6379/0")
+REDIS_URL = os.environ.get("VALKEY_URL") or os.environ.get("REDIS_URL", "redis://:zovark_valkey_dev_2026@valkey:6379/0")
 
 
 def _get_redis():

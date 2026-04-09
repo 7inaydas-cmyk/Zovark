@@ -11,7 +11,7 @@ from typing import Optional, Tuple
 import psycopg2
 
 logger = logging.getLogger(__name__)
-DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@postgres:5432/zovark")
+DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@postgres:5432/zovark")
 
 
 def generate_template_slug(task_type: str, task_id: str) -> str:

@@ -47,7 +47,7 @@ try:
     DATABASE_URL = os.environ.get("DATABASE_URL", _settings.database_url)
 except ImportError:
     ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", "sk-zovark-dev-2026")
-    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@pgbouncer:5432/zovark")
+    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@pgbouncer:5432/zovark")
 
 # Model tier defaults — American models only (Meta Llama)
 TIER_GENERATE = {"model": MODEL_CODE, "max_tokens": 4096, "temperature": 0.3}   # Path C: code gen
@@ -59,7 +59,7 @@ try:
     from settings import settings as _settings_redis
     _redis_url = os.environ.get("REDIS_URL", _settings_redis.redis_url)
 except ImportError:
-    _redis_url = os.environ.get("REDIS_URL", "redis://:hydra-redis-dev-2026@redis:6379/0")
+    _redis_url = os.environ.get("REDIS_URL", "redis://:zovark_valkey_dev_2026@valkey:6379/0")
 _redis_client = _redis.from_url(_redis_url, decode_responses=True)
 
 # Mock requests shim prepended to all generated code

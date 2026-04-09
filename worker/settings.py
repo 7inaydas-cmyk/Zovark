@@ -13,13 +13,13 @@ class ZovarkSettings(BaseSettings):
     db_host: str = "pgbouncer"
     db_port: int = 5432
     db_user: str = "zovark"
-    db_password: SecretStr = SecretStr("hydra_dev_2026")
+    db_password: SecretStr = SecretStr("zovark_dev_2026")
     db_name: str = "zovark"
 
-    # Redis
-    redis_host: str = "redis"
-    redis_port: int = 6379
-    redis_password: SecretStr = SecretStr("hydra-redis-dev-2026")
+    # Valkey (Redis-API-compatible BSD fork)
+    valkey_host: str = "valkey"
+    valkey_port: int = 6379
+    valkey_password: SecretStr = SecretStr("zovark_valkey_dev_2026")
 
     # LLM inference — llama-server in zovark-inference container
     llm_base_url: str = "http://zovark-inference:8080"
@@ -52,6 +52,7 @@ class ZovarkSettings(BaseSettings):
         "env_prefix": "ZOVARK_",
         "env_file": ".env",
         "env_file_encoding": "utf-8",
+        "extra": "ignore",  # ignore legacy ZOVARK_REDIS_PASSWORD
     }
 
     @property
@@ -59,8 +60,18 @@ class ZovarkSettings(BaseSettings):
         return f"postgresql://{self.db_user}:{self.db_password.get_secret_value()}@{self.db_host}:{self.db_port}/{self.db_name}"
 
     @property
+    def valkey_url(self) -> str:
+        # URL scheme stays redis:// — Valkey accepts it (wire-compatible)
+        return f"redis://:{self.valkey_password.get_secret_value()}@{self.valkey_host}:{self.valkey_port}/0"
+
+    # Backwards-compat alias for code that still uses redis_url
+    @property
     def redis_url(self) -> str:
-        return f"redis://:{self.redis_password.get_secret_value()}@{self.redis_host}:{self.redis_port}/0"
+        return self.valkey_url
+
+    @property
+    def redis_password(self) -> SecretStr:
+        return self.valkey_password
 
 
 # Singleton — import this everywhere
@@ -69,6 +80,6 @@ try:
 except Exception:
     # Fallback for test environments without .env
     settings = ZovarkSettings(
-        db_password=SecretStr("hydra_dev_2026"),
-        redis_password=SecretStr("hydra-redis-dev-2026"),
+        db_password=SecretStr("zovark_dev_2026"),
+        valkey_password=SecretStr("zovark_valkey_dev_2026"),
     )

@@ -280,7 +280,7 @@ def _load_correlation_context(tenant_id: str, siem_event: dict) -> dict:
             from settings import settings as _settings
             DATABASE_URL = os.environ.get("DATABASE_URL", _settings.database_url)
         except ImportError:
-            DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@pgbouncer:5432/zovark")
+            DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@pgbouncer:5432/zovark")
         entities = []
         for field_name in ("source_ip", "username", "hostname", "dest_ip"):
             val = siem_event.get(field_name)
@@ -324,7 +324,7 @@ def _load_institutional_knowledge(tenant_id: str, siem_event: dict) -> dict:
             from settings import settings as _settings
             DATABASE_URL = os.environ.get("DATABASE_URL", _settings.database_url)
         except ImportError:
-            DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@pgbouncer:5432/zovark")
+            DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@pgbouncer:5432/zovark")
         entities = []
         for field_name in ("source_ip", "username", "hostname", "dest_ip"):
             val = siem_event.get(field_name)

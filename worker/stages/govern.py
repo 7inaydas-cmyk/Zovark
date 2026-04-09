@@ -17,7 +17,7 @@ try:
     from settings import settings as _settings
     DATABASE_URL = os.environ.get("DATABASE_URL", _settings.database_url)
 except ImportError:
-    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@pgbouncer:5432/zovark")
+    DATABASE_URL = os.environ.get("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@pgbouncer:5432/zovark")
 
 
 def _get_db():

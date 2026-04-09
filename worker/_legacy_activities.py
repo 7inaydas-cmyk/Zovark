@@ -112,7 +112,7 @@ async def check_exact_dedup_activity(alert: dict) -> dict:
             return {"match": None, "action": "new"}
         from dedup.stage1_exact import check_exact_dedup
         import redis
-        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://redis:6379/0'))
+        r = redis.from_url(os.environ.get('VALKEY_URL') or os.environ.get('REDIS_URL', 'redis://valkey:6379/0'))
         match = check_exact_dedup(alert, r)
         return {"match": match, "action": "duplicate" if match else "new"}
     except Exception as e:
@@ -129,7 +129,7 @@ async def check_correlation_activity(alert: dict) -> dict:
             return {"match": None, "action": "new"}
         from dedup.stage2_correlate import check_correlation, merge_alert
         import redis
-        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://redis:6379/0'))
+        r = redis.from_url(os.environ.get('VALKEY_URL') or os.environ.get('REDIS_URL', 'redis://valkey:6379/0'))
         task_id, count = check_correlation(alert, r)
         if task_id:
             merge_alert(alert, task_id, r)
@@ -147,7 +147,7 @@ async def register_dedup_activity(data: dict) -> dict:
         import os, redis
         alert = data["alert"]
         task_id = data["task_id"]
-        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://redis:6379/0'))
+        r = redis.from_url(os.environ.get('VALKEY_URL') or os.environ.get('REDIS_URL', 'redis://valkey:6379/0'))
         from dedup.stage1_exact import register_alert
         from dedup.stage2_correlate import register_correlation
         register_alert(alert, task_id, r)
@@ -1222,7 +1222,7 @@ async def decrement_active_activity(data: dict) -> None:
     from rate_limiter import release_lease
     if isinstance(data, str):
         # Backwards compat: old callers pass tenant_id as string
-        from redis_client import decrement_active
+        from valkey_client import decrement_active
         decrement_active(data)
         return
     release_lease(data["tenant_id"], data["task_id"])
