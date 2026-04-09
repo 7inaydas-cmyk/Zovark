@@ -25,7 +25,8 @@ var secretPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`(?i)(password|passwd|pwd)\s*[:=]\s*\S+`),
 	regexp.MustCompile(`\b\d{3}-\d{2}-\d{4}\b`),
 	regexp.MustCompile(`(?i)(sk|pk|api[_-]?key|token|secret|bearer)[_-]?\w{20,}`),
-	regexp.MustCompile(`(?i)(hydra[_-]dev[_-]2026|hydra-redis-dev-2026|zovark[_-]dev[_-]2026|zovark-redis-dev-2026)`),
+	// Scrub legacy hydra-* and current zovark-* dev passwords from log exports
+	regexp.MustCompile(`(?i)(hydra[_-]dev[_-]2026|hydra-redis-dev-2026|zovark[_-]dev[_-]2026|zovark[_-]valkey[_-]dev[_-]2026|zovark[_-]nats[_-]dev[_-]2026)`),
 }
 
 func scrubSecrets(input string) string {

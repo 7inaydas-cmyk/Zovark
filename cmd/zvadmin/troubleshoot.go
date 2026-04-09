@@ -166,7 +166,7 @@ func troubleshootAlertsStuck() {
 		found(fmt.Sprintf("Backpressure queue has %d entries (limit 200)", bp))
 		fix("Wait for drain — the system is processing as fast as it can.",
 			"Reduce SIEM alert rate if possible.",
-			"Monitor: docker compose exec redis valkey-cli -a hydra-redis-dev-2026 ZCARD zovark:pending_workflows")
+			"Monitor: docker compose exec valkey valkey-cli -a zovark_valkey_dev_2026 ZCARD zovark:pending_workflows")
 		return
 	}
 	passed(fmt.Sprintf("Backpressure queue: %d (normal)", bp))

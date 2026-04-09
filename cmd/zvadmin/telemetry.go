@@ -78,22 +78,27 @@ func psqlSingle(query string) string {
 	return strings.TrimSpace(rows[0][0])
 }
 
-// --- Redis / Valkey via docker exec ---
+// --- Valkey via docker exec ---
 
-func redisPW() string {
-	pw := os.Getenv("REDIS_PASSWORD")
-	if pw == "" {
-		pw = os.Getenv("ZOVARK_REDIS_PASSWORD")
+func valkeyPW() string {
+	// Check new VALKEY_* vars first, then legacy REDIS_*/ZOVARK_REDIS_*
+	for _, key := range []string{
+		"ZOVARK_VALKEY_PASSWORD", "VALKEY_PASSWORD",
+		"ZOVARK_REDIS_PASSWORD", "REDIS_PASSWORD",
+	} {
+		if pw := os.Getenv(key); pw != "" {
+			return pw
+		}
 	}
-	if pw == "" {
-		pw = "hydra-redis-dev-2026"
-	}
-	return pw
+	return "zovark_valkey_dev_2026"
 }
 
+// Backwards-compat alias
+func redisPW() string { return valkeyPW() }
+
 func redisCmd(args ...string) (string, error) {
-	all := append([]string{"compose", "exec", "-T", "redis",
-		"valkey-cli", "-a", redisPW(), "--no-auth-warning"}, args...)
+	all := append([]string{"compose", "exec", "-T", "valkey",
+		"valkey-cli", "-a", valkeyPW(), "--no-auth-warning"}, args...)
 	cmd := exec.Command("docker", all...)
 	var out, stderr bytes.Buffer
 	cmd.Stdout = &out

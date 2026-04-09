@@ -51,8 +51,8 @@ func init() {
 		// Vault
 		VaultAddr:  getEnvOrDefault("VAULT_ADDR", ""),
 		VaultToken: getEnvOrDefault("VAULT_TOKEN", ""),
-		// Redis
-		RedisURL: getEnvOrDefault("REDIS_URL", "redis:6379"),
+		// Valkey (REDIS_URL kept as legacy fallback)
+		RedisURL: getEnvOrDefault("VALKEY_URL", getEnvOrDefault("REDIS_URL", "valkey:6379")),
 		// NATS
 		NATSURL: getEnvOrDefault("NATS_URL", ""),
 	}

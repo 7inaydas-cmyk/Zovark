@@ -44,8 +44,10 @@ func localRateCheck(key string, limit int, dur time.Duration) bool {
 var redisClient *redis.Client
 
 func initRedis() {
-	rawURL := getEnvOrDefault("REDIS_URL", "redis:6379")
-	password := getEnvOrDefault("REDIS_PASSWORD", "")
+	// Valkey is wire-compatible with Redis. Prefer VALKEY_URL, fall back
+	// to REDIS_URL for legacy compat. The go-redis client works unchanged.
+	rawURL := getEnvOrDefault("VALKEY_URL", getEnvOrDefault("REDIS_URL", "valkey:6379"))
+	password := getEnvOrDefault("VALKEY_PASSWORD", getEnvOrDefault("REDIS_PASSWORD", ""))
 
 	// Try parsing as a full redis:// URL first (handles redis://:password@host:port/db)
 	if opts, err := redis.ParseURL(rawURL); err == nil {
