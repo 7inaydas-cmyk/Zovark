@@ -66,6 +66,7 @@ class ExecuteOutput:
     execution_mode: str = "sandbox"  # "sandbox", "tools", "sandbox_fallback", "failed"
     path_d_fallback: bool = False
     path_d_reason: str = ""
+    tools_executed: int = 0  # v3: number of tools that ran (for validator context)
 
 
 @dataclass

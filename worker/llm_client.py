@@ -33,8 +33,16 @@ _IS_SPLIT_ENDPOINT = _FAST_BASE_URL != _CODE_BASE_URL
 
 # Client pool keyed by base URL
 _clients: dict[str, httpx.AsyncClient] = {}
-_fast_semaphore = asyncio.Semaphore(1)  # FAST role: tool selection, param fill
-_code_semaphore = asyncio.Semaphore(1)  # CODE role: assessment, summary
+# Semaphores tuned for llama-server batching.
+# CODE=2: ROG 26B returns 500 errors at 3 concurrent (KV cache pressure).
+# 2 is the sweet spot — parallel enough to keep the GPU busy, stable enough
+# to avoid OOM. FAST=2 for parallel tool selection on the local 4B.
+_fast_semaphore = asyncio.Semaphore(
+    int(os.environ.get("ZOVARK_FAST_SEMAPHORE", "2"))
+)
+_code_semaphore = asyncio.Semaphore(
+    int(os.environ.get("ZOVARK_CODE_SEMAPHORE", "2"))
+)
 
 # Health state for graceful degradation
 _code_endpoint_healthy = True

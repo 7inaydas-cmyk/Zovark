@@ -165,6 +165,10 @@ bash autoresearch/telemetry_driven/run.sh --hours 24 --max-tests 15 --wait 120
 | Using str.format() with JSON templates | Literal {} braces are interpreted as format placeholders | Use .replace() or {{ }} escaping for JSON in prompts |
 | Fixing correct low-evidence scores | Generic test data produces low scores — that's correct | Only fix scoring if realistic test data also scores low |
 | Skipping AutoResearch after changes | AutoResearch finds regressions that 16/16 misses | Run AutoResearch after every significant change |
+| Testing only sequential alerts | Misses concurrency bugs (semaphore cascade, timeout queue) | Run 100-alert Forge at 5/sec against remote endpoints before benchmarking |
+| Forge reusing source_ips from small pool | Dedup layer collapses alerts — 1000 alerts → 10 tasks | Generate unique source_ip per alert (alertIndex maps to last 2 octets) |
+| Blocking on LLM summary in pipeline | One slow endpoint stalls entire queue — cascade timeout | Wrap in asyncio.wait_for(30) with template fallback — verdict never waits |
+| CODE semaphore = 3 on single GPU | Third concurrent request hits KV cache OOM → 500 errors | Semaphore(2) is the sweet spot for ROG 26B on 24GB GPU |
 
 ---
 

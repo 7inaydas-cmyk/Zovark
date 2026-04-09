@@ -364,10 +364,17 @@ var campaigns = []Campaign{
 
 // generateAlert creates a complete alert payload from a template,
 // filling in randomized values and adding the forge marker.
-func generateAlert(scenario AlertTemplate, forgeJobID string) map[string]interface{} {
-	srcIP := randomExternalIP()
+// alertIndex provides uniqueness so burst-generated alerts don't collide
+// in the dedup layer (which hashes task_type + source_ip + raw_log).
+func generateAlert(scenario AlertTemplate, forgeJobID string, alertIndex int) map[string]interface{} {
+	// Deterministic unique source_ip derived from alert index.
+	// Index 1 → 10.200.1.1, index 256 → 10.200.2.1, index 1000 → 10.200.4.232.
+	// Third octet rotates every 254 alerts, second octet rotates every ~65k.
+	srcIP := fmt.Sprintf("10.200.%d.%d",
+		1+(alertIndex/254)%254,
+		1+(alertIndex%254))
 	dstIP := randomInternalIP()
-	username := randomUsername()
+	username := fmt.Sprintf("%s_%d", randomUsername(), alertIndex)
 	hostname := randomHostname()
 	domain := typosquatDomain()
 	subject := phishingSubject()
@@ -382,6 +389,9 @@ func generateAlert(scenario AlertTemplate, forgeJobID string) map[string]interfa
 	rawLog = strings.ReplaceAll(rawLog, "{domain}", domain)
 	rawLog = strings.ReplaceAll(rawLog, "{subject}", subject)
 	rawLog = strings.ReplaceAll(rawLog, "{port}", port)
+	// Append unique forge marker so content hash differs even if somehow
+	// task_type + source_ip collides. Format: "[forge:<jobID>:<index>]"
+	rawLog = fmt.Sprintf("%s [forge:%s:%d]", rawLog, forgeJobID, alertIndex)
 
 	// Build SIEM event
 	siemEvent := make(map[string]interface{})

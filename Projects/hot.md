@@ -23,10 +23,20 @@
 - Gemma 4 thinking: reasoning_effort=none for prose, thinking enabled for GBNF grammar
 
 ## Known Issues
-- CODE semaphore(1): serializes 26B requests — last alert in burst waits ~150s
 - Store stage: rare race where Temporal workflow completes but DB row stays pending
-- assess summary timeout raised to 90s (was 45s)
+- Path C novel types: occasional 500 from ROG 26B tool selection (fail-closed OK)
 - FIXED 2026-04-09: GBNF + thinking tokens — sanitizer strips <channel|>...<channel|>
+- FIXED 2026-04-09: Forge dedup collision — unique source_ip per alert via index
+- FIXED 2026-04-09: CODE cascade timeout — semaphore(2), non-blocking summary with wait_for(30)
+- FIXED 2026-04-09: Validator too strict — tools_executed populated in ExecuteOutput
+
+## 100-Alert Stress Results (post-fix)
+- 100 unique tasks created (was ~10)
+- 98/100 completed in 130s
+- Attacks: avg 85s P95 122s (was avg 176s P95 403s)
+- Benign: avg 67s P95 104s (was avg 173s P95 413s)
+- 0 validation failures, 0 benign FP, 0 cascade timeouts
+- 2 pending: Path C 500 from ROG (fail-closed edge case)
 
 ## Sprint C — COMPLETE
 - C1: Remediation engine — DONE
@@ -43,3 +53,7 @@
 - Don't use Ollama — llama-server only
 - reasoning_effort=none for prose, thinking enabled for GBNF grammar
 - License check errors → DENY (fail-closed, Invariant #6)
+- Don't only test sequentially — run 100-alert Forge before benchmarking
+- Forge must produce unique source_ip per alert (dedup collision)
+- LLM summary MUST be non-blocking (asyncio.wait_for + template fallback)
+- CODE semaphore = 2, not 3 (ROG 26B returns 500 at 3 concurrent)

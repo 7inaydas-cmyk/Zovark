@@ -48,3 +48,7 @@
 | 2026-04-09 | Ollama banned | Supply chain risk, incompatible with GBNF grammar, reasoning_content field issues. Use llama-server only. |
 | 2026-04-09 | Gemma 4 26B-A4B over 31B dense | MoE activates 4B/token from 26B total. 5-7x faster (77 vs ~15 tok/s). Path C 7s vs timeout. |
 | 2026-04-09 | reasoning_effort=none for prose only | GBNF grammar needs thinking for quality tool selection. Prose (summaries) disables thinking. |
+| 2026-04-09 | 1000-alert test exposed 3 bugs | Semaphore(1) cascade timeout, Forge dedup collision, validator too strict. Root cause: all prior tests were sequential (16/16) or tiny (smoke). Added anti-pattern: always test concurrent load against remote endpoints before benchmarking. |
+| 2026-04-09 | CODE semaphore = 2 (not 3) | ROG 26B returns 500 errors at 3 concurrent (KV pressure). 2 is the sweet spot — GPU stays busy, no OOM. |
+| 2026-04-09 | LLM summary only for high-risk true_positives | Summary is cosmetic. Reserving the 26B for (verdict=true_positive AND risk>=70) cuts queue depth by ~50% and keeps benign alerts fast. |
+| 2026-04-09 | Summary is non-blocking with 30s ceiling | Pipeline sets template summary first, tries LLM with asyncio.wait_for(30). If it hits the ceiling, template stays. Verdict/risk are never delayed by LLM. |

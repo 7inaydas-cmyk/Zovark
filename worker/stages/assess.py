@@ -8,6 +8,7 @@ All LLM verdict/summary calls are contained HERE.
 Self-contained: imports httpx, psycopg2 directly.
 Does NOT import from _legacy_activities.py or intelligence/fp_analyzer.py.
 """
+import asyncio
 import os
 import re
 import json
@@ -76,7 +77,7 @@ try:
     ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", _settings.llm_key)
 except ImportError:
     ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", "sk-zovark-dev-2026")
-ASSESS_SUMMARY_TIMEOUT = float(os.getenv("ZOVARK_ASSESS_TIMEOUT", "90"))
+ASSESS_SUMMARY_TIMEOUT = float(os.getenv("ZOVARK_ASSESS_TIMEOUT", "30"))
 
 
 # --- Verdict derivation ---
@@ -666,13 +667,31 @@ async def assess_results(data: dict) -> dict:
         verdict = "needs_analyst_review"
         activity.logger.info(f"Path C learning gate: {verdict} for task {task_id} (original: true_positive)")
 
-    # Summary — skip LLM for benign (no value) and FAST_FILL mode
-    if FAST_FILL or verdict == "benign":
-        summary = _template_summary(task_type, findings, iocs, risk_score)
-    else:
-        summary = await _llm_summary(stdout, task_type, task_id=task_id, tenant_id=tenant_id)
-        if not summary:
-            summary = _template_summary(task_type, findings, iocs, risk_score)
+    # Summary — skip LLM for benign, low-risk, and FAST_FILL mode.
+    # LLM summary is reserved for high-confidence attacks (true_positive,
+    # risk >= 70) where the narrative adds value for the analyst. For
+    # suspicious/inconclusive/needs_review, the template is sufficient.
+    # The verdict/risk/IOCs are already finalized — summary is cosmetic.
+    summary = _template_summary(task_type, findings, iocs, risk_score)
+    needs_llm_summary = (
+        not FAST_FILL
+        and verdict == "true_positive"
+        and risk_score >= 70
+    )
+    if needs_llm_summary:
+        try:
+            llm_result = await asyncio.wait_for(
+                _llm_summary(stdout, task_type, task_id=task_id, tenant_id=tenant_id),
+                timeout=ASSESS_SUMMARY_TIMEOUT,
+            )
+            if llm_result:
+                summary = llm_result
+        except (asyncio.TimeoutError, BaseException) as e:
+            # Pipeline MUST NOT fail because summary is unavailable.
+            # Template summary is already set above — continue with it.
+            activity.logger.info(
+                f"Summary fallback to template (reason: {type(e).__name__})"
+            )
 
     result = AssessOutput(
         verdict=verdict,

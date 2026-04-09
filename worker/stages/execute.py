@@ -399,6 +399,7 @@ def _execute_v3_tools(data: dict) -> dict:
         execution_mode="tools",
         path_d_fallback=False,
         path_d_reason="",
+        tools_executed=result.get("tools_executed", 0),
     ))
 
 

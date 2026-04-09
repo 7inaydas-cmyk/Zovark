@@ -125,6 +125,7 @@ Real mistakes from this project. Do not repeat.
 | AutoResearch cycle | `bash autoresearch/telemetry_driven/run.sh` | No new regressions | After significant changes |
 | Code cache flush | `scripts/flush_code_cache.sh` | No stale cached responses | After prompt or model changes |
 | Arch lint | `bash scripts/lint_architecture.sh` | 0 failures | Before merge, session end |
+| Concurrent load test | 100-alert Forge at 5/sec (`POST /api/v1/admin/forge/start`) | ~100 tasks created, 0 cascade timeouts, 0 validation failures, <5 min completion | Before any benchmark, after LLM/endpoint changes |
 
 ---
 

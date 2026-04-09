@@ -359,7 +359,7 @@ func runForgeJob(ctx context.Context, job *ForgeJob, token string) {
 	submitted := 0
 	dedupCount := 0
 
-	for _, entry := range alertQueue {
+	for alertIdx, entry := range alertQueue {
 		select {
 		case <-ctx.Done():
 			log.Printf("[FORGE] Job %s cancelled during submission at %d/%d", job.ID, submitted, cfg.TotalAlerts)
@@ -367,7 +367,7 @@ func runForgeJob(ctx context.Context, job *ForgeJob, token string) {
 		default:
 		}
 
-		alert := generateAlert(entry.scenario, job.ID)
+		alert := generateAlert(entry.scenario, job.ID, alertIdx+1)
 		body, _ := json.Marshal(alert)
 
 		req, err := http.NewRequestWithContext(ctx, "POST", apiBase+"/api/v1/tasks", bytes.NewReader(body))
