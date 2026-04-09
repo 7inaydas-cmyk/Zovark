@@ -28,6 +28,7 @@ kanban-plugin: basic
 - [x] Codebase manifest: scripts/generate_manifest.sh → docs/MANIFEST.json
 - [x] Knowledge base v1.1: 16 files, ~38k words, 132 functions indexed — completed 2026-04-08
 - [x] Overnight 2026-04-09: 6 unit test fixes, detect_credential_access + detect_supply_chain (42 tools), dual-endpoint FAST/CODE, 7 scanner bypasses fixed, 534/534 tests
+- [x] 26B-A4B connected: Gemma 4 26B MoE on ROG 4090, Path C 7s (was timeout), GBNF grammar, reasoning_effort tuning
 
 ## Backlog
 

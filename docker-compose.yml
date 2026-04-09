@@ -295,7 +295,7 @@ services:
       - OTEL_EXPORTER_OTLP_ENDPOINT=${OTEL_EXPORTER_OTLP_ENDPOINT:-http://zovark-signoz-collector:4318}
       - ZOVARK_MAX_CONCURRENT_ACTIVITIES=${ZOVARK_MAX_CONCURRENT_ACTIVITIES:-16}
       - ZOVARK_MAX_CONCURRENT_WORKFLOWS=${ZOVARK_MAX_CONCURRENT_WORKFLOWS:-32}
-      - ZOVARK_FAST_FILL=${ZOVARK_FAST_FILL:-true}
+      - ZOVARK_FAST_FILL=${ZOVARK_FAST_FILL:-false}
       - ZOVARK_PARALLEL_TOOLS_ENABLED=${ZOVARK_PARALLEL_TOOLS_ENABLED:-false}
       - ZOVARK_MAX_PARALLEL_TOOLS=${ZOVARK_MAX_PARALLEL_TOOLS:-4}
       - PYTHONUNBUFFERED=1
@@ -303,7 +303,7 @@ services:
       - DOCKER_HOST=tcp://docker-socket-proxy:2375
       - HTTP_PROXY=http://squid-proxy:3128
       - HTTPS_PROXY=http://squid-proxy:3128
-      - NO_PROXY=postgres,redis,temporal,minio,nats,embedding-server,localhost,zovark-api,pgbouncer,host.docker.internal,api,docker-socket-proxy,zovark-signoz-collector,zovark-clickhouse,zovark-inference,rog-inference
+      - NO_PROXY=postgres,redis,temporal,minio,nats,embedding-server,localhost,zovark-api,pgbouncer,host.docker.internal,api,docker-socket-proxy,zovark-signoz-collector,zovark-clickhouse,zovark-inference,rog-inference,100.100.79.83
     extra_hosts:
       - "rog-inference:${ROG_INFERENCE_IP:-100.100.79.83}"
     volumes:

@@ -829,14 +829,12 @@ async def _analyze_v3_tools(ingest: IngestOutput) -> AnalyzeOutput:
         result = await llm_call(
             prompt=user_prompt,
             system_prompt=system_prompt,
-            model_config=TIER_FILL,  # FAST model — tool selection
+            model_config=TIER_GENERATE,  # CODE model — 26B MoE handles novel types at 77 tok/s
             task_id=ingest.task_id,
             stage="analyze",
             task_type=ingest.task_type,
             tenant_id=ingest.tenant_id,
-            timeout=120.0,  # Path C with full catalog needs more time on CPU inference
-            # No response_format — GBNF grammar handles JSON enforcement.
-            # response_format + grammar can conflict on some llama-server builds.
+            timeout=120.0,
             role="tool_select",
             grammar_name="tool_selection",
         )

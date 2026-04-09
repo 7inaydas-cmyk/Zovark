@@ -76,7 +76,7 @@ try:
     ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", _settings.llm_key)
 except ImportError:
     ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", "sk-zovark-dev-2026")
-ASSESS_SUMMARY_TIMEOUT = float(os.getenv("ZOVARK_ASSESS_TIMEOUT", "45"))
+ASSESS_SUMMARY_TIMEOUT = float(os.getenv("ZOVARK_ASSESS_TIMEOUT", "90"))
 
 
 # --- Verdict derivation ---
@@ -143,7 +143,9 @@ async def _llm_summary(stdout: str, task_type: str, task_id: str = "", tenant_id
     """Call LLM to generate a 2-3 sentence investigation summary."""
     try:
         summary_config = get_model_config(severity="low", task_type=task_type)
-        summary_config.update({"model": MODEL_CODE, "temperature": 0.3, "max_tokens": 200})
+        # Gemma 4 uses thinking tokens (~400) before generating content.
+        # max_tokens must accommodate thinking + response (~200).
+        summary_config.update({"model": MODEL_CODE, "temperature": 0.3, "max_tokens": 1024})
         result = await llm_call(
             prompt=stdout[:2000],
             system_prompt=_SUMMARY_SYSTEM,
@@ -157,7 +159,8 @@ async def _llm_summary(stdout: str, task_type: str, task_id: str = "", tenant_id
             grammar_name=None,  # no grammar for prose summary
         )
         return result["content"]
-    except Exception as e:
+    except BaseException as e:
+        # Catch BaseException — asyncio.CancelledError is not an Exception in Python 3.11+
         print(f"LLM summary failed (non-fatal): {type(e).__name__}: {e}")
         return ""
 
@@ -663,8 +666,8 @@ async def assess_results(data: dict) -> dict:
         verdict = "needs_analyst_review"
         activity.logger.info(f"Path C learning gate: {verdict} for task {task_id} (original: true_positive)")
 
-    # Summary
-    if FAST_FILL:
+    # Summary — skip LLM for benign (no value) and FAST_FILL mode
+    if FAST_FILL or verdict == "benign":
         summary = _template_summary(task_type, findings, iocs, risk_score)
     else:
         summary = await _llm_summary(stdout, task_type, task_id=task_id, tenant_id=tenant_id)

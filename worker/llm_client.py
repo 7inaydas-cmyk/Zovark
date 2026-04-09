@@ -92,9 +92,13 @@ def _sanitize_llm_output(text: str) -> str:
 
 
 def _make_client(base_url: str) -> httpx.AsyncClient:
+    # CODE endpoint (Ollama with 31B) needs longer read timeout:
+    # thinking tokens + generation can take 60-120s on first request
+    is_code = _IS_SPLIT_ENDPOINT and base_url == _CODE_BASE_URL
+    read_timeout = 300.0 if is_code else 120.0
     return httpx.AsyncClient(
         base_url=base_url,
-        timeout=httpx.Timeout(connect=5.0, read=120.0, write=5.0, pool=10.0),
+        timeout=httpx.Timeout(connect=10.0, read=read_timeout, write=5.0, pool=10.0),
     )
 
 
@@ -128,17 +132,22 @@ async def llm_request(
     """
     global _code_endpoint_healthy, _code_health_failures
 
-    # Select semaphore and endpoint based on role
+    # Determine if this request needs the CODE endpoint.
+    # Route by role (verdict/summary) OR by model name (Path C tool selection
+    # uses MODEL_CODE because the bigger model handles novel attack types better).
+    _MODEL_CODE = os.environ.get("ZOVARK_MODEL_CODE", "")
     is_code_role = role in ("verdict", "summary")
-    sem = _code_semaphore if is_code_role else _fast_semaphore
+    is_code_model = _MODEL_CODE and model == _MODEL_CODE
+    needs_code = is_code_role or is_code_model
+    sem = _code_semaphore if needs_code else _fast_semaphore
 
-    # Endpoint routing: CODE roles use CODE endpoint, FAST roles use FAST
-    if is_code_role and _IS_SPLIT_ENDPOINT and _code_endpoint_healthy:
+    # Endpoint routing: CODE needs → CODE endpoint (with degradation fallback)
+    if needs_code and _IS_SPLIT_ENDPOINT and _code_endpoint_healthy:
         target_base = _CODE_BASE_URL
     else:
         target_base = _FAST_BASE_URL
-        if is_code_role and _IS_SPLIT_ENDPOINT and not _code_endpoint_healthy:
-            logger.warning(f"CODE endpoint degraded — falling back to FAST for {role}")
+        if needs_code and _IS_SPLIT_ENDPOINT and not _code_endpoint_healthy:
+            logger.warning(f"CODE endpoint degraded — falling back to FAST for {role}/{model}")
 
     # Merge role-based sampling config
     sampling = SAMPLING_CONFIGS.get(role, SAMPLING_CONFIGS["tool_select"])
@@ -146,8 +155,16 @@ async def llm_request(
     async with sem:
         client = get_client(target_base)
         start = time.perf_counter()
+
+        # When routing to CODE endpoint (Ollama), ensure the model name
+        # matches what Ollama has loaded. The pipeline may pass generic
+        # names like "zovark-standard" from model_router.
+        effective_model = model
+        if target_base == _CODE_BASE_URL and _IS_SPLIT_ENDPOINT and _MODEL_CODE:
+            effective_model = _MODEL_CODE
+
         body = {
-            "model": model,
+            "model": effective_model,
             "messages": messages,
             "temperature": temperature if temperature != 0.1 else sampling["temperature"],
             "max_tokens": max_tokens,
@@ -159,12 +176,18 @@ async def llm_request(
             body["response_format"] = response_format
 
         # Grammar-constrained decoding (Agent 3)
+        # Both FAST and CODE endpoints are llama-server — GBNF works on both.
         if grammar_name:
             grammar_text = _load_grammar(grammar_name)
             if grammar_text:
                 body["grammar"] = grammar_text
                 # Remove response_format when using grammar — they conflict
                 body.pop("response_format", None)
+        else:
+            # Prose output (no grammar): disable Gemma 4 thinking so content
+            # goes to content field instead of reasoning_content.
+            # With grammar, the model needs thinking to select the right tools.
+            body["reasoning_effort"] = "none"
 
         # OTEL span
         _span = None
@@ -196,7 +219,7 @@ async def llm_request(
             logger.info(f"LLM {model} [{stage}/{role}] {duration}s tokens={tokens_in}/{tokens_out} endpoint={target_base}")
 
             # Reset CODE health on success
-            if is_code_role and _IS_SPLIT_ENDPOINT and target_base == _CODE_BASE_URL:
+            if needs_code and _IS_SPLIT_ENDPOINT and target_base == _CODE_BASE_URL:
                 _code_endpoint_healthy = True
                 _code_health_failures = 0
 
@@ -216,7 +239,7 @@ async def llm_request(
             duration = round(time.perf_counter() - start, 2)
             logger.error(f"LLM {model} [{stage}/{role}] timed out after {duration}s endpoint={target_base}")
             # Track CODE endpoint failures for graceful degradation
-            if is_code_role and _IS_SPLIT_ENDPOINT and target_base == _CODE_BASE_URL:
+            if needs_code and _IS_SPLIT_ENDPOINT and target_base == _CODE_BASE_URL:
                 _code_health_failures += 1
                 if _code_health_failures >= _CODE_FAILURE_THRESHOLD:
                     _code_endpoint_healthy = False

@@ -45,3 +45,6 @@
 | 2026-04-09 | detect_golden_ticket boost gated on keywords | Only tool/technique names (mimikatz, forged) trigger 75 floor, not structural matches |
 | 2026-04-09 | detect_kerberoasting caps krbtgt risk | krbtgt TGS + RC4 = min(risk, 35), not max — it's a TGT renewal, not kerberoasting |
 | 2026-04-09 | CODE endpoint graceful degradation | After 3 consecutive failures, fall back to FAST. Resets on success. |
+| 2026-04-09 | Ollama banned | Supply chain risk, incompatible with GBNF grammar, reasoning_content field issues. Use llama-server only. |
+| 2026-04-09 | Gemma 4 26B-A4B over 31B dense | MoE activates 4B/token from 26B total. 5-7x faster (77 vs ~15 tok/s). Path C 7s vs timeout. |
+| 2026-04-09 | reasoning_effort=none for prose only | GBNF grammar needs thinking for quality tool selection. Prose (summaries) disables thinking. |
