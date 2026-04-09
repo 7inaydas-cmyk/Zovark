@@ -47,13 +47,13 @@
 |----------|------------|
 | Admin login | admin@test.local / TestPass2026 (tenant e1c1bc5d) |
 | Analyst login | analyst2@test.local / TestPass2026 (same tenant) |
-| Database | user=zovark, password=hydra_dev_2026, db=zovark |
-| Redis | password=hydra-redis-dev-2026 |
+| Database | user=zovark, password=zovark_dev_2026, db=zovark |
+| Redis | password=zovark_valkey_dev_2026 |
 | LLM endpoint | `ZOVARK_LLM_ENDPOINT=http://zovark-inference:8080/v1/chat/completions` |
 | LLM key | `ZOVARK_LLM_KEY=sk-zovark-dev-2026` |
 | JWT | 30-minute access tokens |
 
-DB and Redis passwords were intentionally not renamed during the rebrand (`hydra_dev_2026`, `hydra-redis-dev-2026`). Use these exact values in all docker/psql/redis-cli commands.
+All dev passwords use the `zovark_*_dev_2026` convention (purged of the legacy `hydra_*` prefix on 2026-04-10). Use the values above in all docker/psql/valkey-cli commands.
 
 ---
 
@@ -331,7 +331,7 @@ Everything else (os, sys, subprocess, socket, eval, exec, etc.) is blocked befor
 | Field | Value |
 |-------|-------|
 | Engine | PostgreSQL 16 + pgvector |
-| Credentials | user=zovark, password=hydra_dev_2026, db=zovark |
+| Credentials | user=zovark, password=zovark_dev_2026, db=zovark |
 | Tables | 84 (+ template_promotion_approvals) |
 | Migrations | 64 files in `migrations/` |
 | Connection pooling | PgBouncer (400 client / 25 server) |
@@ -492,10 +492,12 @@ All variables have sensible defaults. Key configuration:
 | Variable | Default | Purpose |
 |----------|---------|---------|
 | `DATABASE_URL` | -- | PostgreSQL connection string |
-| `REDIS_URL` | -- | Redis connection string |
-| `REDIS_PASSWORD` | `hydra-redis-dev-2026` | Redis password |
+| `VALKEY_URL` | `redis://:zovark_valkey_dev_2026@valkey:6379/0` | Valkey connection string (URL scheme stays `redis://` — Valkey is wire-compatible) |
+| `VALKEY_PASSWORD` | `zovark_valkey_dev_2026` | Valkey password |
+| `REDIS_URL` / `REDIS_PASSWORD` | (legacy aliases) | Code reads `VALKEY_*` first, falls back to these |
 | `JWT_SECRET` | -- | JWT signing secret |
 | `TEMPORAL_ADDRESS` | -- | Temporal server address |
+| `COMPOSE_PROJECT_NAME` | `zovark` | Sets container/network/volume prefix (replaces legacy `hydra-mvp`) |
 
 ---
 
@@ -764,7 +766,7 @@ Lab-only autonomous experimentation loops. Nothing enters production without hum
 - **Traces show**: per-stage latency, per-tool execution, LLM call timing, governance decisions
 - **Config files**: `config/signoz/` (ClickHouse cluster, OTEL collector, frontend nginx)
 - **First-time setup**: Run schema migrator once after ClickHouse starts:
-  `docker run --rm --network hydra-mvp_zovark-internal signoz/signoz-schema-migrator:0.111.16 --dsn "tcp://zovark-clickhouse:9000" sync`
+  `docker run --rm --network zovark_zovark-internal signoz/signoz-schema-migrator:0.111.16 --dsn "tcp://zovark-clickhouse:9000" sync`
 - **Streaming Waterfall**: real-time tool progress via PostgreSQL NOTIFY → SSE → React component
 
 ## MCP Servers for Development
@@ -786,7 +788,7 @@ Query: Ask natural language questions about the codebase
 ## Known Issues
 
 1. **Healer HTTP thread** — Blocks during health check cycles on Windows Docker Desktop (GIL + subprocess contention). Async fix applied but Windows GIL issue persists. Works on Linux.
-2. **DB/Redis passwords** — Still `hydra_dev_2026` / `hydra-redis-dev-2026`. Intentional, non-breaking.
+2. **DB/Valkey passwords** — `zovark_dev_2026` / `zovark_valkey_dev_2026` (renamed 2026-04-10 as part of the hydra purge).
 3. **DPO pipeline** — Training data exists in `dpo/` but no production model trained.
 4. **SIEM lab Filebeat** — Needs polling mode + bind mount on Windows Docker.
 5. **RLS owner bypass** — `zovark` user owns tables and bypasses RLS. Use `zovark_app` user in production for enforcement. Already created with GRANT permissions.

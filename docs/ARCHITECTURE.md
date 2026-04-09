@@ -874,9 +874,9 @@ PostgreSQL 16 with pgvector extension, fronted by PgBouncer (400 client connecti
 ### Credentials
 
 - User: `zovark`
-- Password: `hydra_dev_2026` (not renamed during rebrand -- non-breaking)
+- Password: `zovark_dev_2026`
 - Database: `zovark`
-- Redis password: `hydra-redis-dev-2026` (not renamed during rebrand)
+- Valkey password: `zovark_valkey_dev_2026`
 
 ### Schema Statistics
 
@@ -1258,9 +1258,6 @@ Packages a Zovark release as a `.zvk` archive with Ed25519 signing:
 | 2 | Stale Temporal workflows | Block workflow queue | Terminate before benchmarks: `tctl workflow terminate` |
 | 3 | `investigation_memory` table name | Singular; plural reference silently fails | Always use singular form |
 | 4 | `fetch_task` legacy dependency | V2 workflow calls legacy function by string name | Tech debt; works correctly |
-| 5 | Redis password not renamed | Still `hydra-redis-dev-2026` | Non-breaking |
-| 6 | DB password not renamed | Still `hydra_dev_2026` for user `zovark` | Non-breaking |
-| 7 | model_config.yaml tier names | Still `hydra-fast`/`hydra-standard`/`hydra-enterprise` | Logical labels only |
 
 ### Performance
 
@@ -1332,7 +1329,7 @@ Templates use `{{parameter_name}}` placeholders filled by Path A (direct mapping
 | `ZOVARK_LLM_ENDPOINT` | `http://zovark-inference:8080/v1/chat/completions` | Primary LLM endpoint |
 | `ZOVARK_LLM_KEY` | `zovark-llm-key-2026` | LLM API key (llama-server ignores this but logged) |
 | `DATABASE_URL` | `postgresql://zovark:zovark_dev_2026@postgres:5432/zovark` | PostgreSQL connection |
-| `REDIS_URL` | `redis://:hydra-redis-dev-2026@redis:6379/0` | Redis connection |
+| `REDIS_URL` | `redis://:zovark_valkey_dev_2026@valkey:6379/0` | Redis connection |
 
 ### Optional
 

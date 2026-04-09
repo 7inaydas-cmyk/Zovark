@@ -127,8 +127,8 @@ All benign alert types (password_change, windows_update, health_check, service_r
 | Dashboard | http://localhost:3100 | admin@test.local | TestPass2026 |
 | Dashboard (analyst) | http://localhost:3100 | analyst2@test.local | TestPass2026 |
 | Go API | http://localhost:8090 | (JWT via /api/v1/auth/login) | — |
-| PostgreSQL | localhost:5432 | zovark | hydra_dev_2026 |
-| Valkey (Redis) | localhost:6379 | — | hydra-redis-dev-2026 |
+| PostgreSQL | localhost:5432 | zovark | zovark_dev_2026 |
+| Valkey (Redis) | localhost:6379 | — | zovark_valkey_dev_2026 |
 | LLM Inference | http://zovark-inference:8080 | — | — |
 | Temporal | localhost:7233 | — | — |
 | Signoz | localhost:3301 (tracing profile) | admin@zovark.local | TestPass2026 |

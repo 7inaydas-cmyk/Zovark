@@ -98,8 +98,8 @@ cmd/zvadmin/zvadmin.exe diagnose    # Full 8-check diagnostic
 |----------|------------|
 | Admin login | admin@test.local / TestPass2026 (tenant e1c1bc5d) |
 | Analyst login | analyst2@test.local / TestPass2026 |
-| Database | user=zovark, password=hydra_dev_2026, db=zovark |
-| Redis/Valkey | password=hydra-redis-dev-2026 |
+| Database | user=zovark, password=zovark_dev_2026, db=zovark |
+| Redis/Valkey | password=zovark_valkey_dev_2026 |
 | LLM endpoint | http://zovark-inference:8080/v1/chat/completions |
 
 ---

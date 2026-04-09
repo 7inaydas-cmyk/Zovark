@@ -1,5 +1,5 @@
 # HOT CACHE
-# Updated: 2026-04-09 (26B connected)
+# Updated: 2026-04-10 (hydra purge complete, 26B connected)
 # Read this FIRST. Skip CLAUDE.md unless you need deep detail.
 
 ## Current State
@@ -71,6 +71,16 @@
 - D1: zvadmin bundle CLI
 - D2: OTA sync service
 
+## Hydra Purge (2026-04-10)
+- Compose service: `redis:` → `valkey:` (was already running valkey/valkey:7-alpine, just hadn't been renamed)
+- Container: `zovark-redis` → `zovark-valkey`
+- Volume: `redis_data` → `valkey_data`
+- Compose project: `hydra-mvp` → `zovark` (set via .env COMPOSE_PROJECT_NAME). All new container/network/volume names get the `zovark_*` prefix.
+- Passwords renamed: `hydra_dev_2026` → `zovark_dev_2026`, `hydra-redis-dev-2026` → `zovark_valkey_dev_2026`, `hydra-nats-dev-2026` → `zovark_nats_dev_2026`
+- Env vars: `REDIS_URL/REDIS_PASSWORD` → `VALKEY_URL/VALKEY_PASSWORD` (legacy REDIS_* kept as fallback)
+- Python `import redis` library KEPT — Valkey is wire-compatible and no `valkey-py` library exists
+- Old `hydra-mvp_*` Docker volumes are now orphaned (intentional — fresh data start)
+
 ## Anti-Patterns
 - Don't use .* in regex (ReDoS) — split into independent re.search() calls
 - Don't use fmt.Sprintf for JSON — use json.Marshal
@@ -81,3 +91,4 @@
 - Forge must produce unique source_ip per alert (dedup collision)
 - LLM summary MUST be non-blocking (asyncio.wait_for + template fallback)
 - CODE semaphore = 2, not 3 (ROG 26B returns 500 at 3 concurrent)
+- Don't ship hydra-* references in new code — full purge done 2026-04-10
