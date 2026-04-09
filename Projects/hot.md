@@ -47,6 +47,21 @@
 - See docs/BENCHMARK_1000_ALERT_v2.md
 - Bug 4 discovered: rate limiter + silent Forge 429s → `X-Zovark-Internal: forge` bypass
 
+## 1000-Alert Results FULL (2/sec, campaign mode)
+- 1000 submitted, 873 completed, 127 backpressure orphans
+- 0 dedup, 0 HTTP errors, 0 validation failures
+- Detection rate: 91.0% (559/614 attacks → true_positive)
+- Benign FP rate: 0.0% (0/259 clean benign)
+- Separation gap: 88.3 points
+- All 6 high-confidence attacks (c2, lateral, exfil, kerberos, ransom, golden): 100% at risk 100
+- brute_force: 100% at risk 95, phishing: 100% at avg 78
+- lolbin_abuse: 48% (55 novel PowerShell -enc variants scored 15 → calibration gap)
+- Latency queue-dominated: avg 391s P50 428s P95 667s
+- Entity graph: +1708 entities, +1076 edges during this run
+- Worker throughput: ~42/min (16 activities × 27s per assess)
+- Next run: submission ≤0.7/sec to avoid backpressure orphans
+- See docs/BENCHMARK_1000_ALERT_FULL.md
+
 ## Sprint C — COMPLETE
 - C1: Remediation engine — DONE
 - C2: Copilot API — DONE
