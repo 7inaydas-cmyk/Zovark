@@ -7,7 +7,6 @@ of the basic `import temporalio` check.
 Endpoints:
     GET /health     -> 200 {"status": "ok", "worker_id": "...", "uptime_s": N}
     GET /ready      -> 200 if Temporal connected and DB reachable, 503 otherwise
-    GET /metrics    -> 200 basic worker metrics (JSON)
 
 Usage:
     Start from main.py:
@@ -32,8 +31,6 @@ _state = {
     "started_at": time.time(),
     "temporal_connected": False,
     "db_reachable": False,
-    "tasks_processed": 0,
-    "last_task_at": None,
 }
 
 
@@ -45,12 +42,6 @@ def set_temporal_connected(connected: bool):
 def set_db_reachable(reachable: bool):
     """Called by main.py or pool_manager after DB check."""
     _state["db_reachable"] = reachable
-
-
-def increment_tasks():
-    """Called after each task completes."""
-    _state["tasks_processed"] += 1
-    _state["last_task_at"] = time.time()
 
 
 class HealthHandler(BaseHTTPRequestHandler):
@@ -73,17 +64,6 @@ class HealthHandler(BaseHTTPRequestHandler):
                 "worker_id": _state["worker_id"],
             }
             self._respond(status_code, body)
-
-        elif self.path == "/metrics":
-            body = {
-                "worker_id": _state["worker_id"],
-                "uptime_s": int(time.time() - _state["started_at"]),
-                "temporal_connected": _state["temporal_connected"],
-                "db_reachable": _state["db_reachable"],
-                "tasks_processed": _state["tasks_processed"],
-                "last_task_at": _state["last_task_at"],
-            }
-            self._respond(200, body)
 
         else:
             self._respond(404, {"error": "not found"})
