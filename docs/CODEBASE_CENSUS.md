@@ -157,8 +157,6 @@ Commit: 161 commits on master
 - `./worker/prompts/entity_extraction.py` (61 lines)
 - `./worker/prompts/investigation_prompt.py` (82 lines)
 - `./worker/rate_limiter.py` (130 lines)
-- `./worker/realtime/__init__.py` (0 lines)
-- `./worker/realtime/collaboration.py` (209 lines)
 - `./worker/redis_client.py` (49 lines)
 - `./worker/reporting/__init__.py` (0 lines)
 - `./worker/reporting/export.py` (413 lines)

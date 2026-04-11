@@ -20,6 +20,7 @@ This file provides context for AI coding agents working on Zovark.
 - Redis for ephemeral state only (rate limits, cache) — never for durable data
 - go-redis/v9 for Redis access in Go — never raw TCP/RESP parsing
 - psycopg2 ThreadedConnectionPool for DB in Python — never per-call psycopg2.connect()
+- Alert dispatch path: Go API publishes events to Redpanda (via NATS). The worker's NATS consumer (worker/nats_consumer.py) picks up messages and starts Temporal workflows. There is no direct Temporal dispatch from the Go API.
 
 ## Important: Legacy File Layout
 
