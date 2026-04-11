@@ -64,11 +64,13 @@ for i in $(seq 1 30); do
     sleep 2
 done
 
-# Apply migrations
-for f in "$PROJECT_DIR"/migrations/*.sql; do
-    echo "  Applying: $(basename "$f")"
-    docker compose -f docker-compose.production.yml exec -T postgres psql -U zovark -d zovark < "$f" 2>/dev/null || true
-done
+# Validate and apply migrations via Go binary (validates prefixes, gaps, then applies in NNN order)
+echo "  Validating and applying migrations..."
+docker compose -f docker-compose.production.yml run --rm -T api ./api migrate up
+if [ $? -ne 0 ]; then
+    echo "ERROR: Migration validation or application failed. Check output above."
+    exit 1
+fi
 
 echo ""
 echo "Starting all services..."
@@ -79,7 +81,7 @@ echo "Waiting for services to be healthy..."
 sleep 10
 
 # Health check
-"$SCRIPT_DIR/health-check.sh" || true
+"$SCRIPT_DIR/health-check.sh"
 
 echo ""
 echo "=== Zovark is running ==="

@@ -53,9 +53,13 @@ When adding new activities/workflows, add them to the `_legacy_*.py` files AND u
 4. `docker compose build worker && docker compose up -d worker`
 
 ### Add a new migration
-1. Create `migrations/NNN_description.sql` (next number after 040)
+1. Create `migrations/NNN_description.sql` where NNN is the next sequential number after the current highest (check with `ls migrations/*.sql | tail -1`). Never reuse or skip numbers.
 2. Use IF NOT EXISTS / IF EXISTS for idempotency
-3. Apply: `docker compose exec -T postgres psql -U zovark -d zovark < migrations/NNN_description.sql`
+3. Run `api -migrate status` before manual applies to check for prefix conflicts or gaps
+4. Apply: `docker compose exec -T postgres psql -U zovark -d zovark < migrations/NNN_description.sql`
+5. CI validates prefix uniqueness and contiguity via `api migrate validate` (no DB required)
+
+**Note:** There is an intentional gap at prefixes 056-058 (sequence jumps from 055 to 059) due to historical renumbering. Do not attempt to fill this gap — always use the next number after the current highest. The gap is allowlisted in `api/migrate.go` (`allowedMigrationGaps`).
 
 ### Debug a failed investigation
 ```bash

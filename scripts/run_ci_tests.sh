@@ -102,6 +102,20 @@ print('Entity normalization OK')
     if $migration_ok; then
         log_pass "Migration syntax check ($(ls migrations/*.sql 2>/dev/null | wc -l) files)"
     fi
+
+    # --- Migration prefix uniqueness check ---
+    log_info "Checking migration prefix uniqueness..."
+    dup_prefixes=$(ls migrations/*.sql 2>/dev/null | xargs -I{} basename {} | sed 's/_.*//' | sort | uniq -d)
+    if [ -n "$dup_prefixes" ]; then
+        log_fail "Duplicate migration prefixes found: $dup_prefixes"
+        for prefix in $dup_prefixes; do
+            ls migrations/${prefix}_*.sql 2>/dev/null | while read -r f; do
+                echo "  CONFLICT: $f"
+            done
+        done
+    else
+        log_pass "Migration prefix uniqueness (no duplicates)"
+    fi
 }
 
 # ─── Layer 2: Integration Tests (mock Ollama, Docker stack) ──

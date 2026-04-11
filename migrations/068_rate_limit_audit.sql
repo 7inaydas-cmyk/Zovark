@@ -1,3 +1,4 @@
+-- Migration 068 (renumbered from 052 to resolve prefix conflict)
 -- Sprint 1J: Rate limit audit trail
 -- Records lease acquisition/release events for debugging and metrics.
 -- Leases themselves live in Redis; this table is for historical analysis.

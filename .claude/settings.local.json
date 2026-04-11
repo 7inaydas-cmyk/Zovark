@@ -1,7 +1,14 @@
 {
   "permissions": {
     "allow": [
-      "mcp__hydra__zovark_query"
+      "mcp__hydra__zovark_query",
+      "Bash(git mv:*)",
+      "Bash(ls /home/excelsior/Zovark_mine/migrations/*.sql)",
+      "Bash(xargs -I{} basename {})",
+      "Bash(go build:*)",
+      "Bash(mkdir -p ~/.traycer/yolo_artifacts)",
+      "Bash(echo '{}')",
+      "Bash(git config:*)"
     ]
   }
 }

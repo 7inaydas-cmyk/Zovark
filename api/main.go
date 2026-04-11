@@ -72,7 +72,12 @@ func main() {
 		if len(os.Args) > 2 {
 			cmd = os.Args[2]
 		}
-		// Initialize DB for migration commands
+		// validate only needs files on disk — skip DB/Vault init
+		if cmd == "validate" {
+			runMigrations(cmd, os.Args[3:])
+			return
+		}
+		// Initialize DB for migration commands that need it
 		initVault()
 		defer stopVault()
 		appConfig.DatabaseURL = GetSecret("database_url", "DATABASE_URL", appConfig.DatabaseURL)

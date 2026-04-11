@@ -1,3 +1,4 @@
+-- Migration 067 (renumbered from 051 to resolve prefix conflict)
 -- Sprint 1H: Bootstrap Pipeline enhancements
 -- Adds detection_hints + last_synced to mitre_techniques,
 -- creates dedicated kev_catalog table for CISA KEV entries.

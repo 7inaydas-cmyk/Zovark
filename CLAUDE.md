@@ -23,7 +23,7 @@
 | Tests | 535 unit + 14 integration + 515-alert corpus |
 | Services | 10 core Docker containers + optional profiles (tracing, monitoring, siem-lab, etc.) + zvadmin host CLI |
 | Dashboard | React 19 + TypeScript + Vite 7 + Tailwind 4, 17 pages, SOC War Room design |
-| Database | PostgreSQL 16 + pgvector, 86+ tables, 64 migrations, RLS on 10 tables |
+| Database | PostgreSQL 16 + pgvector, 86+ tables, 65 migrations, RLS on 10 tables |
 | Concurrency | 16 concurrent activities, 32 concurrent workflows, Semaphore(2) on LLM calls |
 | Feature Flag | `ZOVARK_EXECUTION_MODE=tools` (v3, default) or `sandbox` (v2 legacy) |
 | Observability | OpenTelemetry → Signoz (self-hosted ClickHouse). `docker compose --profile tracing up -d` |
@@ -302,7 +302,7 @@ Everything else (os, sys, subprocess, socket, eval, exec, etc.) is blocked befor
 | Engine | PostgreSQL 16 + pgvector |
 | Credentials | user=zovark, password=hydra_dev_2026, db=zovark |
 | Tables | 84 (+ template_promotion_approvals) |
-| Migrations | 64 files in `migrations/` |
+| Migrations | 65 files in `migrations/` (highest prefix: 068, gap at 056-058) |
 | Connection pooling | PgBouncer (400 client / 25 server) |
 | RLS | Enabled on 10 tenant-scoped tables (defense-in-depth) |
 | Key tables | agent_tasks (has trace_id), investigations, agent_skills (25 templates), llm_audit_log, cipher_audit_events, audit_events (has trace_id), entities, entity_edges, detection_rules, response_playbooks, cross_tenant_entities, investigation_memory (SINGULAR name), template_promotion_approvals |
