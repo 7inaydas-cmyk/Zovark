@@ -96,8 +96,8 @@ WORKER_ID = os.environ.get("WORKER_ID") or _generate_worker_id()
 # Parallel worker pool — configurable concurrent activity limits
 # Path A/benign are CPU-only (fast), Path B/C need LLM (slower)
 # On A100 80GB: set PATH_B=8, PATH_C=8 via env vars
-MAX_CONCURRENT_ACTIVITIES = int(os.environ.get("ZOVARK_MAX_CONCURRENT_ACTIVITIES", "8"))
-MAX_CONCURRENT_WORKFLOWS = int(os.environ.get("ZOVARK_MAX_CONCURRENT_WORKFLOWS", "16"))
+MAX_CONCURRENT_ACTIVITIES = int(os.environ.get("ZOVARK_MAX_CONCURRENT_ACTIVITIES", "16"))  # FIX #19
+MAX_CONCURRENT_WORKFLOWS = int(os.environ.get("ZOVARK_MAX_CONCURRENT_WORKFLOWS", "32"))   # FIX #19
 os.environ["WORKER_ID"] = WORKER_ID  # Make available to logger module
 
 

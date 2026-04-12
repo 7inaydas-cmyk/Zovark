@@ -64,7 +64,7 @@ def flush_redis():
     import subprocess
     try:
         redis_pw = os.environ.get("REDIS_PASSWORD", "zovark-redis-dev-2026")
-        subprocess.run(["docker", "compose", "exec", "-T", "redis", "redis-cli", "-a", redis_pw, "FLUSHDB"],
+        subprocess.run(["docker", "compose", "exec", "-T", "redis", "valkey-cli", "-a", redis_pw, "FLUSHDB"],
                       capture_output=True, timeout=10)
     except Exception:
         print("  Warning: Could not flush Redis cache")

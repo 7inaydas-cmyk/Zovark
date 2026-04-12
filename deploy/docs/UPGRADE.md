@@ -14,7 +14,7 @@ Before upgrading, verify:
 Always back up before upgrading. This is not optional.
 
 ```bash
-cd /path/to/hydra-mvp
+cd /path/to/zovark
 
 # Database backup
 docker compose exec -T postgres pg_dump -U zovark -d zovark -Fc > \

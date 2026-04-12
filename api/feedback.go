@@ -35,7 +35,7 @@ func submitFeedbackHandler(c *gin.Context) {
 
 	// Verify the investigation belongs to the caller's tenant
 	var ownerTenant string
-	err := dbPool.QueryRow(context.Background(),
+	err := dbPool.QueryRow(c.Request.Context(), // FIX #11
 		"SELECT tenant_id FROM investigations WHERE id = $1", investigationID,
 	).Scan(&ownerTenant)
 	if err != nil || ownerTenant != tenantID {
@@ -45,7 +45,7 @@ func submitFeedbackHandler(c *gin.Context) {
 
 	feedbackID := uuid.New().String()
 
-	_, err = dbPool.Exec(context.Background(),
+	_, err = dbPool.Exec(c.Request.Context(), // FIX #11
 		`INSERT INTO investigation_feedback
 			(id, investigation_id, tenant_id, analyst_id, verdict_correct, corrected_verdict,
 			 false_positive, missed_threat, notes, analyst_confidence)
@@ -84,7 +84,7 @@ func getFeedbackStatsHandler(c *gin.Context) {
 		AvgAnalystConf float64 `json:"avg_analyst_confidence"`
 	}
 
-	err := dbPool.QueryRow(context.Background(),
+	err := dbPool.QueryRow(c.Request.Context(), // FIX #11
 		`SELECT
 			COUNT(*)::int,
 			COALESCE(SUM(CASE WHEN verdict_correct THEN 1 ELSE 0 END), 0)::int,

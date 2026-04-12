@@ -94,7 +94,7 @@ WHERE code_template LIKE '%import os%';
 ### Run the accuracy benchmark
 ```bash
 # Against existing completed investigations
-docker run --rm --network hydra-mvp_zovark-internal \
+docker run --rm --network zovark_zovark-internal \
   -v "$(pwd):/app" -w /app -e ZOVARK_API_URL=http://zovark-api:8090 \
   python:3.11-slim sh -c "pip install -q httpx && python scripts/score_baseline.py"
 ```

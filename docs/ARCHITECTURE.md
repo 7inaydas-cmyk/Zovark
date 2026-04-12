@@ -1114,11 +1114,11 @@ Written to `/var/log/zovark/healer_report_YYYYMMDD.json` with:
 | Service | Image | Port | Container Name |
 |---------|-------|------|---------------|
 | postgres | `pgvector/pgvector:pg16` | 5432 | zovark-postgres |
-| redis | `redis:7-alpine` | 6379 | zovark-redis |
+| redis | `valkey/valkey:7-alpine` | 6379 | zovark-redis |
 | pgbouncer | `edoburu/pgbouncer` | 6432 | zovark-pgbouncer |
 | temporal | `temporalio/auto-setup:1.24.2` | 7233 | zovark-temporal |
 | api | Custom Go build | 8090 | zovark-api |
-| worker | Custom Python build | -- | hydra-mvp-worker-1 |
+| worker | Custom Python build | -- | zovark-worker-1 |
 | dashboard | Custom React (nginx) | 3000 | zovark-dashboard |
 | squid-proxy | `ubuntu/squid` | 3128 | zovark-egress-proxy |
 

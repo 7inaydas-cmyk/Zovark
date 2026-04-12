@@ -48,8 +48,22 @@ DEDUP_ENABLED = os.environ.get("DEDUP_ENABLED", "true").lower() == "true"
 FAST_FILL = os.environ.get("ZOVARK_FAST_FILL", "false").lower() == "true"
 
 
-# --- DB helper ---
+# --- DB helper — uses ThreadedConnectionPool via pool_manager ---
+# FIX #3: replaced direct psycopg2.connect() with pooled_connection
+try:
+    from database.pool_manager import pooled_connection as _pooled_connection
+    _USE_POOL = True
+except ImportError:
+    _USE_POOL = False
+
 def _get_db():
+    """Return a DB connection. Uses pool when available, falls back to direct connect."""
+    if _USE_POOL:
+        # Return a raw connection from the pool (caller must close to return it)
+        from database.pool_manager import _pools
+        pool = _pools.get("normal") or _pools.get("critical")
+        if pool:
+            return pool.getconn()
     return psycopg2.connect(DATABASE_URL)
 
 

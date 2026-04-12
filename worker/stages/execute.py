@@ -409,6 +409,14 @@ def _execute_v2_sandbox(data: dict) -> dict:
     if not code:
         raise ValueError("No code provided for v2 sandbox")
 
+    # FIX #6: FAST_FILL bypasses Docker isolation — only permit in explicit sandbox mode
+    execution_mode = data.get("execution_mode", os.environ.get("ZOVARK_EXECUTION_MODE", "tools"))
+    if FAST_FILL and execution_mode != "sandbox":
+        raise ValueError(
+            "FAST_FILL=true is only permitted when execution_mode=sandbox. "
+            "Set ZOVARK_EXECUTION_MODE=sandbox or disable ZOVARK_FAST_FILL."
+        )
+
     # AST prefilter
     is_safe, reason = _ast_check(code)
     if not is_safe:

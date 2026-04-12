@@ -315,67 +315,25 @@ server.tool(
 );
 
 // ═══════════════════════════════════════════════════════════════
-//  TOOL 4: zovark_query
+//  TOOL 4: zovark_stats  (replaces removed zovark_query)
+// FIX #7: zovark_query removed — it bypassed JWT auth, RLS tenant isolation,
+// and audit logging by connecting directly to PostgreSQL. Replaced with
+// zovark_stats which fetches pre-aggregated stats via the Go API.
 // ═══════════════════════════════════════════════════════════════
-const WRITE_PATTERN =
-  /\b(INSERT|UPDATE|DELETE|DROP|ALTER|TRUNCATE|CREATE|GRANT|REVOKE|COPY)\b/i;
-
 server.tool(
-  "zovark_query",
-  "Execute a read-only SQL query against Zovark's PostgreSQL database. SELECT only — all write operations are blocked.",
+  "zovark_stats",
+  "Fetch pre-aggregated investigation statistics from the Zovark API. Use zovark_get_report for individual investigation details.",
   {
-    sql: z.string().describe("SQL query (SELECT only)"),
-    format: z.enum(["table", "json"]).default("json").describe("Output format"),
+    period_hours: z.number().default(24).describe("Look-back window in hours (default 24)"),
   },
-  async ({ sql: sqlInput, format }) => {
+  async ({ period_hours }) => {
     try {
-      // Safety check
-      if (WRITE_PATTERN.test(sqlInput)) {
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: "BLOCKED: Only SELECT queries are allowed. Write operations (INSERT, UPDATE, DELETE, DROP, ALTER, TRUNCATE, CREATE, GRANT, REVOKE, COPY) are forbidden.",
-            },
-          ],
-          isError: true,
-        };
-      }
-
-      const result = await query(sqlInput);
-      const columns = result.fields.map((f) => f.name);
-
-      if (format === "table") {
-        // Simple ASCII table
-        const header = columns.join(" | ");
-        const sep = columns.map((c) => "-".repeat(c.length)).join("-+-");
-        const rows = result.rows.map((row) =>
-          columns.map((c) => String(row[c] ?? "NULL")).join(" | ")
-        );
-        return {
-          content: [
-            {
-              type: "text" as const,
-              text: [header, sep, ...rows].join("\n") +
-                `\n\n(${result.rowCount} rows)`,
-            },
-          ],
-        };
-      }
-
+      const result = await apiGet(`/api/v1/stats?hours=${period_hours}`);
       return {
         content: [
           {
             type: "text" as const,
-            text: JSON.stringify(
-              {
-                columns,
-                rows: result.rows,
-                row_count: result.rowCount,
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify(result, null, 2),
           },
         ],
       };
@@ -384,7 +342,7 @@ server.tool(
         content: [
           {
             type: "text" as const,
-            text: `Query error: ${err instanceof Error ? err.message : String(err)}`,
+            text: `Stats error: ${err instanceof Error ? err.message : String(err)}`,
           },
         ],
         isError: true,

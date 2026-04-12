@@ -176,7 +176,7 @@ func authenticateAPIKey(c *gin.Context) bool {
 	var scopes []string
 	var expiresAt *time.Time
 
-	err := dbPool.QueryRow(context.Background(),
+	err := dbPool.QueryRow(c.Request.Context(), // FIX #11
 		`SELECT ak.id, ak.tenant_id, ak.scopes, ak.expires_at
 		 FROM api_keys ak
 		 WHERE ak.key_hash = $1 AND ak.is_active = true`,

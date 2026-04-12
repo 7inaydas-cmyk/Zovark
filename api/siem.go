@@ -51,16 +51,23 @@ func webhookAlertHandler(c *gin.Context) {
 		return
 	}
 
-	// 3. HMAC-SHA256 validation (if secret configured)
-	if secret, ok := connConfig["webhook_secret"].(string); ok && secret != "" {
-		sig := c.GetHeader("X-Webhook-Signature")
-		mac := hmac.New(sha256.New, []byte(secret))
-		mac.Write(body)
-		expected := hex.EncodeToString(mac.Sum(nil))
-		if sig != expected {
-			c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid webhook signature"})
-			return
-		}
+	// 3. HMAC-SHA256 validation — FIX #4: require webhook_secret; reject unsigned calls
+	secret, hasSecret := connConfig["webhook_secret"].(string)
+	if !hasSecret || secret == "" {
+		c.JSON(http.StatusForbidden, gin.H{"error": "log source has no webhook_secret configured — unsigned webhooks are not accepted"})
+		return
+	}
+	sig := c.GetHeader("X-Webhook-Signature")
+	if sig == "" {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "missing X-Webhook-Signature header"})
+		return
+	}
+	mac := hmac.New(sha256.New, []byte(secret))
+	mac.Write(body)
+	expected := hex.EncodeToString(mac.Sum(nil))
+	if sig != expected {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "invalid webhook signature"})
+		return
 	}
 
 	// 4. Parse payload
@@ -222,6 +229,23 @@ func sanitizeSIEMField(value string, maxLen int) string {
 	return strings.TrimSpace(cleaned)
 }
 
+// sanitizeSIEMMap recursively sanitizes all string values in a map.
+// FIX #5: prevents unsanitized siem_event fields from reaching LLM prompt construction.
+func sanitizeSIEMMap(m map[string]interface{}) map[string]interface{} {
+	out := make(map[string]interface{}, len(m))
+	for k, v := range m {
+		switch val := v.(type) {
+		case string:
+			out[k] = sanitizeSIEMField(val, 2000)
+		case map[string]interface{}:
+			out[k] = sanitizeSIEMMap(val)
+		default:
+			out[k] = v
+		}
+	}
+	return out
+}
+
 func autoInvestigateAlert(ctx context.Context, tenantID, alertID string, normalized map[string]interface{}) (string, error) {
 	// Map severity to task type
 	taskType := "log_analysis"
@@ -298,7 +322,7 @@ func autoInvestigateAlert(ctx context.Context, tenantID, alertID string, normali
 	}
 
 	wfStart := time.Now()
-	_, err = tc.ExecuteWorkflow(context.Background(), workflowOptions, workflowName, map[string]interface{}{
+	_, err = tc.ExecuteWorkflow(ctx, workflowOptions, workflowName, map[string]interface{}{ // FIX #11
 		"task_type": taskType,
 		"input":     input,
 	})

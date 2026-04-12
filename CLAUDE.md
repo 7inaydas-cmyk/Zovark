@@ -5,7 +5,7 @@
 
 > Air-gapped SOC investigation platform for regulated enterprises (GDPR/HIPAA/CMMC).
 > Receives SIEM alerts, runs deterministic tool-based investigations, delivers structured verdicts.
-> Rebranded from HYDRA. Repo directory is still `hydra-mvp`. All source code uses "Zovark" branding.
+> Rebranded from HYDRA. All source code uses "Zovark" branding.
 
 ## Quick Reference
 
@@ -356,7 +356,7 @@ Apply migrations: `docker compose exec -T postgres psql -U zovark -d zovark < mi
 | pgbouncer | edoburu/pgbouncer | 6432 | zovark-pgbouncer | pg_isready |
 | temporal | temporalio/auto-setup:1.24.2 | 7233 | zovark-temporal | -- |
 | api | Custom Go build | 8090 | zovark-api | GET /ready (DB+Redis+Temporal) |
-| worker | Custom Python build | -- | hydra-mvp-worker-1 | import check |
+| worker | Custom Python build | -- | zovark-worker-1 | import check |
 | dashboard | Custom React (nginx) | 3000 | zovark-dashboard | wget 127.0.0.1:3000 |
 | healer | Python (agent/healer.py) | 8081 | zovark-healer | curl 127.0.0.1:8081/api/health |
 | squid-proxy | ubuntu/squid | 3128 | zovark-egress-proxy | -- |
@@ -721,7 +721,7 @@ Lab-only autonomous experimentation loops. Nothing enters production without hum
 - **Traces show**: per-stage latency, per-tool execution, LLM call timing, governance decisions
 - **Config files**: `config/signoz/` (ClickHouse cluster, OTEL collector, frontend nginx)
 - **First-time setup**: Run schema migrator once after ClickHouse starts:
-  `docker run --rm --network hydra-mvp_zovark-internal signoz/signoz-schema-migrator:0.111.16 --dsn "tcp://zovark-clickhouse:9000" sync`
+  `docker run --rm --network zovark_zovark-internal signoz/signoz-schema-migrator:0.111.16 --dsn "tcp://zovark-clickhouse:9000" sync`
 - **Streaming Waterfall**: real-time tool progress via PostgreSQL NOTIFY → SSE → React component
 
 ## MCP Servers for Development
@@ -733,7 +733,7 @@ Requires: Signoz tracing stack running (`docker compose --profile tracing up -d`
 Signoz login: admin@zovark.local / TestPass2026
 
 ### Code Graph RAG MCP (codebase knowledge graph)
-Register: `claude mcp add-json code-graph-rag '{"command":"npx","args":["-y","@er77/code-graph-rag-mcp","/path/to/hydra-mvp"],"env":{"MCP_TIMEOUT":"80000"}}'`
+Register: `claude mcp add-json code-graph-rag '{"command":"npx","args":["-y","@er77/code-graph-rag-mcp","/path/to/zovark"],"env":{"MCP_TIMEOUT":"80000"}}'`
 Index: Use `batch_index` tool in Claude Code after first setup, continue until 100%
 Query: Ask natural language questions about the codebase
 ```
@@ -749,7 +749,7 @@ Query: Ask natural language questions about the codebase
 5. **RLS owner bypass** — `zovark` user owns tables and bypasses RLS. Use `zovark_app` user in production for enforcement. Already created with GRANT permissions.
 6. **3 pre-existing test failures** — `test_adversarial_review.py` TestReviewFailSafe (3 tests). The adversarial review passes through when LLM unavailable; tests expect blocking. Not a security issue.
 7. **Nginx localhost IPv6** — Alpine resolves `localhost` to `::1` but nginx binds `0.0.0.0`. All healthchecks use `127.0.0.1` explicitly.
-8. **Valkey RDB migration** — Switching from Redis 7 to Valkey 7 requires clearing the Redis data volume (`docker volume rm hydra-mvp_redis_data`) because RDB format v12 is incompatible. Dedup counters and code cache are transient — no data loss.
+8. **Valkey RDB migration** — Switching from Redis 7 to Valkey 7 requires clearing the Redis data volume (`docker volume rm zovark_redis_data`) because RDB format v12 is incompatible. Dedup counters and code cache are transient — no data loss.
 9. **Mock Ollama in test stack** — `docker-compose.test.yml` uses `mock-ollama` container for CI. This is intentional (test fixture), not a production dependency.
 10. **Gemma 4 E4B requires >=12GB Docker memory** — Q4_K_M (5GB GGUF) needs ~7GB RAM with default 128K context. Fixed with `--ctx-size 4096` (reduces to ~2GB). Docker Desktop must be set to >=12GB for reliable operation. Uses `--jinja --reasoning off`. GBNF grammars verified working.
 11. **Healer memory leak** — On Windows Docker Desktop, healer can grow to 3GB+ with 5000+ PIDs (GIL + asyncio contention). Memory-limited to 512MB in docker-compose.yml. Restart healer if it hits the limit.

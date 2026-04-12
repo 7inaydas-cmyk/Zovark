@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"fmt"
 	"net/http"
 	"time"
@@ -42,7 +41,7 @@ func registerHandler(c *gin.Context) {
 
 	// Validate that the tenant_id exists and is active
 	var tenantActive bool
-	err := dbPool.QueryRow(context.Background(),
+	err := dbPool.QueryRow(c.Request.Context(), // FIX #11
 		"SELECT is_active FROM tenants WHERE id = $1", req.TenantID,
 	).Scan(&tenantActive)
 	if err != nil {
@@ -62,7 +61,7 @@ func registerHandler(c *gin.Context) {
 
 	userID := uuid.New().String()
 
-	_, err = dbPool.Exec(context.Background(),
+	_, err = dbPool.Exec(c.Request.Context(), // FIX #11
 		"INSERT INTO users (id, tenant_id, email, display_name, role, password_hash) VALUES ($1, $2, $3, $4, $5, $6)",
 		userID, req.TenantID, req.Email, req.DisplayName, "analyst", string(hashedPassword))
 	if err != nil {
@@ -95,7 +94,7 @@ func loginHandler(c *gin.Context) {
 		PasswordHash string
 	}
 
-	err := dbPool.QueryRow(context.Background(),
+	err := dbPool.QueryRow(c.Request.Context(), // FIX #11
 		"SELECT id, tenant_id, email, role, password_hash FROM users WHERE email = $1", req.Email).
 		Scan(&user.ID, &user.TenantID, &user.Email, &user.Role, &user.PasswordHash)
 
@@ -173,11 +172,13 @@ func loginHandler(c *gin.Context) {
 	}
 
 	// Set refresh token as httpOnly cookie
+	// FIX #10: Secure: true unconditionally — behind TLS-terminating proxy c.Request.TLS is always nil
+	secureCookie := getEnvOrDefault("ZOVARK_COOKIE_SECURE", "true") != "false"
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshTokenString,
 		HttpOnly: true,
-		Secure:   c.Request.TLS != nil,
+		Secure:   secureCookie,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   7 * 24 * 60 * 60,
 		Path:     "/",
@@ -220,12 +221,24 @@ func refreshHandler(c *gin.Context) {
 		return
 	}
 
-	// Issue new access token (15 min)
+	// FIX #2: verify user still exists and is active before issuing new token
+	var isActive bool
+	var currentRole string
+	err = dbPool.QueryRow(c.Request.Context(),
+		"SELECT is_active, role FROM users WHERE id = $1 AND tenant_id = $2",
+		claims.UserID, claims.TenantID,
+	).Scan(&isActive, &currentRole)
+	if err != nil || !isActive {
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user not found or inactive"})
+		return
+	}
+
+	// Issue new access token (30 min) using current role from DB
 	accessClaims := CustomClaims{
 		TenantID: claims.TenantID,
 		UserID:   claims.UserID,
 		Email:    claims.Email,
-		Role:     claims.Role,
+		Role:     currentRole,
 		RegisteredClaims: jwt.RegisteredClaims{
 			ExpiresAt: jwt.NewNumericDate(time.Now().Add(30 * time.Minute)),
 			IssuedAt:  jwt.NewNumericDate(time.Now()),
@@ -254,11 +267,13 @@ func refreshHandler(c *gin.Context) {
 // logoutHandler clears the refresh token cookie.
 // POST /api/v1/auth/logout
 func logoutHandler(c *gin.Context) {
+	// FIX #10: Secure: true unconditionally
+	secureCookie := getEnvOrDefault("ZOVARK_COOKIE_SECURE", "true") != "false"
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    "",
 		HttpOnly: true,
-		Secure:   c.Request.TLS != nil,
+		Secure:   secureCookie,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   -1,
 		Path:     "/",

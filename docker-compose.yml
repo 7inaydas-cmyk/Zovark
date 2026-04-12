@@ -47,7 +47,7 @@ services:
       valkey-server
       --maxmemory 256mb
       --maxmemory-policy allkeys-lru
-      --requirepass ${REDIS_PASSWORD:-zovark-redis-dev-2026}
+      --requirepass ${REDIS_PASSWORD:-hydra-redis-dev-2026}
       --rename-command FLUSHALL ""
       --rename-command CONFIG ""
       --rename-command DEBUG ""
@@ -56,7 +56,7 @@ services:
     expose:
       - "6379"
     healthcheck:
-      test: ["CMD", "valkey-cli", "-a", "${REDIS_PASSWORD:-zovark-redis-dev-2026}", "ping"]
+      test: ["CMD", "valkey-cli", "-a", "${REDIS_PASSWORD:-hydra-redis-dev-2026}", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -710,7 +710,7 @@ services:
         soft: 262144
         hard: 262144
 
-  # Schema migration (run once): docker run --rm --network hydra-mvp_zovark-internal signoz/signoz-schema-migrator:0.111.16 --dsn "tcp://zovark-clickhouse:9000" sync
+  # Schema migration (run once): docker run --rm --network zovark_zovark-internal signoz/signoz-schema-migrator:0.111.16 --dsn "tcp://zovark-clickhouse:9000" sync
 
   zovark-signoz-collector:
     image: signoz/signoz-otel-collector:0.111.16

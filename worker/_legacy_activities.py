@@ -58,6 +58,15 @@ def _return_connection(conn, tier="normal"):
     """Return a connection to its pool (or close if no pool)."""
     pool = _pools.get(tier) or _pools.get("normal")
     if pool is not None:
+
+
+def _get_llm_key() -> str:
+    """FIX #18: get LLM key from settings (SecretStr) with env var override."""
+    try:
+        from settings import settings as _s
+        return os.environ.get("ZOVARK_LLM_KEY", _s.llm_key.get_secret_value())
+    except Exception:
+        return os.environ.get("ZOVARK_LLM_KEY", "")
         try:
             pool.putconn(conn)
         except Exception:
@@ -71,7 +80,7 @@ def _sync_commit(cur):
     cur.execute("SET LOCAL synchronous_commit = on")
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def check_semantic_dedup_activity(alert: dict) -> dict:
     """Check if a semantically similar investigation already exists."""
     try:
@@ -87,7 +96,7 @@ async def check_semantic_dedup_activity(alert: dict) -> dict:
         return {"match": None, "action": "new"}
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def store_fingerprint_activity(data: dict) -> dict:
     """Store investigation fingerprint after successful completion."""
     try:
@@ -103,7 +112,7 @@ async def store_fingerprint_activity(data: dict) -> dict:
         return {"stored": False}
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def check_exact_dedup_activity(alert: dict) -> dict:
     """Stage 1: Exact hash dedup via Redis."""
     try:
@@ -112,7 +121,7 @@ async def check_exact_dedup_activity(alert: dict) -> dict:
             return {"match": None, "action": "new"}
         from dedup.stage1_exact import check_exact_dedup
         import redis
-        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://redis:6379/0'))
+        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://:hydra-redis-dev-2026@redis:6379/0'))  # FIX #16
         match = check_exact_dedup(alert, r)
         return {"match": match, "action": "duplicate" if match else "new"}
     except Exception as e:
@@ -120,7 +129,7 @@ async def check_exact_dedup_activity(alert: dict) -> dict:
         return {"match": None, "action": "new"}
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def check_correlation_activity(alert: dict) -> dict:
     """Stage 2: Rule correlation sliding window via Redis."""
     try:
@@ -129,7 +138,7 @@ async def check_correlation_activity(alert: dict) -> dict:
             return {"match": None, "action": "new"}
         from dedup.stage2_correlate import check_correlation, merge_alert
         import redis
-        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://redis:6379/0'))
+        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://:hydra-redis-dev-2026@redis:6379/0'))  # FIX #16
         task_id, count = check_correlation(alert, r)
         if task_id:
             merge_alert(alert, task_id, r)
@@ -140,14 +149,14 @@ async def check_correlation_activity(alert: dict) -> dict:
         return {"match": None, "action": "new"}
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def register_dedup_activity(data: dict) -> dict:
     """Register alert in all dedup layers after spawning new investigation."""
     try:
         import os, redis
         alert = data["alert"]
         task_id = data["task_id"]
-        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://redis:6379/0'))
+        r = redis.from_url(os.environ.get('REDIS_URL', 'redis://:hydra-redis-dev-2026@redis:6379/0'))  # FIX #16
         from dedup.stage1_exact import register_alert
         from dedup.stage2_correlate import register_correlation
         register_alert(alert, task_id, r)
@@ -191,10 +200,10 @@ async def fetch_task(task_id: str) -> dict:
     raise ValueError(f"Task {task_id} not found after {max_retries} retries (~8s)")
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def generate_code(task_data: dict) -> dict:
     llm_endpoint = os.environ.get("ZOVARK_LLM_ENDPOINT", "http://zovark-inference:8080/v1/chat/completions")
-    api_key = os.environ.get("ZOVARK_LLM_KEY", "zovark-llm-key-2026")
+    api_key = _get_llm_key()  # FIX #18
 
     prompt = task_data.get("input", {}).get("prompt", "")
     task_type = task_data.get("task_type", "Log Analysis")
@@ -386,7 +395,7 @@ requests = MockRequests()
     }
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def validate_code(code: str) -> dict:
     safe, reason = is_safe_python_code(code)
     return {
@@ -395,7 +404,7 @@ async def validate_code(code: str) -> dict:
     }
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def preflight_validate_code(code: str) -> dict:
     """Preflight validation — runs in <100ms, no sandbox needed."""
     from validation.preflight import preflight_validate, auto_fix_code
@@ -419,7 +428,7 @@ async def preflight_validate_code(code: str) -> dict:
     }
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def save_investigation_pattern(data: dict) -> dict:
     """Save successful investigation pattern to memory table."""
     conn = get_db_connection()
@@ -449,7 +458,7 @@ async def save_investigation_pattern(data: dict) -> dict:
         _return_connection(conn)
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def execute_code(code: str) -> dict:
     # Stage 1: Adversarial review — red-team LLM checks for sandbox escape attempts
     # Must run BEFORE AST prefilter (Stage 2) and Docker execution (Stage 3)
@@ -644,7 +653,7 @@ async def record_usage(usage_data: dict) -> None:
         _return_connection(conn)
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def save_investigation_step(step_data: dict) -> None:
     conn = get_db_connection()
     try:
@@ -682,7 +691,7 @@ async def save_investigation_step(step_data: dict) -> None:
         _return_connection(conn)
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def check_followup_needed(check_data: dict) -> dict:
     """Parse JSON output and determine if follow-up is needed. Activity for Temporal determinism."""
     stdout_str = check_data.get("stdout", "")
@@ -706,11 +715,11 @@ async def check_followup_needed(check_data: dict) -> dict:
         return {"needed": False, "prompt": ""}
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def generate_followup_code(task_data: dict) -> dict:
     """Generate code for a follow-up step, including previous step context."""
     llm_endpoint = os.environ.get("ZOVARK_LLM_ENDPOINT", "http://zovark-inference:8080/v1/chat/completions")
-    api_key = os.environ.get("ZOVARK_LLM_KEY", "zovark-llm-key-2026")
+    api_key = _get_llm_key()  # FIX #18
 
     prompt = task_data.get("prompt", "")
     previous_context = task_data.get("previous_context", "")
@@ -930,7 +939,7 @@ async def update_approval_request(update_data: dict) -> None:
         _return_connection(conn)
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def retrieve_skill(task_type: str, prompt: str) -> dict:
     tei_url = os.environ.get("TEI_URL", "http://embedding-server:80/embed")
     conn = get_db_connection()
@@ -1016,7 +1025,7 @@ async def retrieve_skill(task_type: str, prompt: str) -> dict:
         _return_connection(conn)
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def fill_skill_parameters(data: dict) -> dict:
     import json
     import os
@@ -1061,7 +1070,7 @@ async def fill_skill_parameters(data: dict) -> dict:
         }
 
     llm_endpoint = os.environ.get("ZOVARK_LLM_ENDPOINT", "http://zovark-inference:8080/v1/chat/completions")
-    api_key = os.environ.get("ZOVARK_LLM_KEY", "zovark-llm-key-2026")
+    api_key = _get_llm_key()  # FIX #18
     tier_config = get_tier_config("fill_skill_parameters")
     model_name = tier_config["model"]
 
@@ -1170,7 +1179,7 @@ async def fill_skill_parameters(data: dict) -> dict:
         }
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def render_skill_template(data: dict) -> str:
     import json
 
@@ -1235,7 +1244,7 @@ async def heartbeat_lease_activity(data: dict) -> None:
     heartbeat_lease(data["tenant_id"], data["task_id"])
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def validate_generated_code(code: str) -> dict:
     """Dry-run validation gate. Runs BEFORE full sandbox execution."""
     validator = DryRunValidator(timeout=5)
@@ -1248,7 +1257,7 @@ async def validate_generated_code(code: str) -> dict:
     return result
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def enrich_alert_with_memory(task_input: dict) -> dict:
     """Step 0: Check investigation memory before generating code."""
     try:
@@ -1291,11 +1300,11 @@ def _extract_iocs_from_input(task_input: dict) -> list:
     return entities
 
 
-@activity.defn
+# FIX #21: @activity.defn removed — dead registration (not in main.py)
 async def write_investigation_memory(memory_data: dict) -> None:
     try:
         llm_endpoint = os.environ.get("ZOVARK_LLM_ENDPOINT", "http://zovark-inference:8080/v1/chat/completions")
-        api_key = os.environ.get("ZOVARK_LLM_KEY", "zovark-llm-key-2026")
+        api_key = _get_llm_key()  # FIX #18
         tei_url = os.environ.get("TEI_URL", "http://embedding-server:80/embed")
 
         task_id = memory_data.get("task_id")

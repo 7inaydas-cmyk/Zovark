@@ -29,7 +29,7 @@ SEVERITY_TTL = {
 SEMANTIC_DEDUP_THRESHOLD = 0.95
 
 # Redis config
-REDIS_URL = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+REDIS_URL = os.environ.get("REDIS_URL", "redis://:hydra-redis-dev-2026@redis:6379/0")  # FIX #16
 REDIS_CACHE_PREFIX = "zovark:inv_cache:"
 REDIS_CACHE_TTL = 3600  # 1 hour default Redis TTL (seconds)
 

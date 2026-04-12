@@ -59,12 +59,12 @@ sudo apt-get install -y git
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-org/hydra-mvp.git
-cd hydra-mvp
+git clone https://github.com/your-org/zovark.git
+cd zovark
 
 # Or if using a release tarball
-tar xzf hydra-mvp-v1.0.0.tar.gz
-cd hydra-mvp
+tar xzf zovark-v1.0.0.tar.gz
+cd zovark
 ```
 
 ## Environment Configuration

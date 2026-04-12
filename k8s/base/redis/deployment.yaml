@@ -20,9 +20,9 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:7-alpine
+          image: valkey/valkey:7-alpine  # FIX #12
           command:
-            - redis-server
+            - valkey-server
             - --maxmemory
             - 256mb
             - --maxmemory-policy
@@ -40,14 +40,14 @@ spec:
           livenessProbe:
             exec:
               command:
-                - redis-cli
+                - valkey-cli
                 - ping
             initialDelaySeconds: 10
             periodSeconds: 10
           readinessProbe:
             exec:
               command:
-                - redis-cli
+                - valkey-cli
                 - ping
             initialDelaySeconds: 5
             periodSeconds: 10

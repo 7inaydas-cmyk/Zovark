@@ -93,6 +93,12 @@ func authMiddleware() gin.HandlerFunc {
 			return
 		}
 
+		// FIX SEC-001: reject refresh tokens used as access tokens (token confusion)
+		if claims.Subject != "access" {
+			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "Invalid token type"})
+			return
+		}
+
 		// Inject tenant and user references into request context
 		c.Set("tenant_id", claims.TenantID)
 		c.Set("user_id", claims.UserID)

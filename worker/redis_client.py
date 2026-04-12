@@ -7,7 +7,7 @@ _redis_conn = None
 def _get_redis():
     global _redis_conn
     if _redis_conn is None:
-        url = os.environ.get("REDIS_URL", "redis://redis:6379/0")
+        url = os.environ.get("REDIS_URL", "redis://:hydra-redis-dev-2026@redis:6379/0")  # FIX #16
         _redis_conn = redis.from_url(url, decode_responses=True)
     return _redis_conn
 

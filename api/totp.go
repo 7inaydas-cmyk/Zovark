@@ -150,7 +150,7 @@ func totpSetupHandler(c *gin.Context) {
 
 	// Check if TOTP is already enabled
 	var totpEnabled bool
-	err := dbPool.QueryRow(context.Background(),
+	err := dbPool.QueryRow(c.Request.Context(), // FIX #11
 		"SELECT totp_enabled FROM users WHERE id = $1", userID,
 	).Scan(&totpEnabled)
 	if err != nil {
@@ -172,7 +172,7 @@ func totpSetupHandler(c *gin.Context) {
 
 	// Get user email for the provisioning URI
 	var email string
-	_ = dbPool.QueryRow(context.Background(),
+	_ = dbPool.QueryRow(c.Request.Context(), // FIX #11
 		"SELECT email FROM users WHERE id = $1", userID,
 	).Scan(&email)
 
@@ -182,7 +182,7 @@ func totpSetupHandler(c *gin.Context) {
 		respondError(c, http.StatusInternalServerError, "ENCRYPT_FAILED", "Failed to encrypt TOTP secret")
 		return
 	}
-	_, err = dbPool.Exec(context.Background(),
+	_, err = dbPool.Exec(c.Request.Context(), // FIX #11
 		"UPDATE users SET totp_secret = $1 WHERE id = $2",
 		encryptedSecret, userID,
 	)
@@ -224,7 +224,7 @@ func totpVerifyHandler(c *gin.Context) {
 	// Get stored secret
 	var secret *string
 	var totpEnabled bool
-	err := dbPool.QueryRow(context.Background(),
+	err := dbPool.QueryRow(c.Request.Context(), // FIX #11
 		"SELECT totp_secret, totp_enabled FROM users WHERE id = $1", userID,
 	).Scan(&secret, &totpEnabled)
 	if err != nil || secret == nil {
@@ -251,7 +251,7 @@ func totpVerifyHandler(c *gin.Context) {
 	}
 
 	// Enable TOTP
-	_, err = dbPool.Exec(context.Background(),
+	_, err = dbPool.Exec(c.Request.Context(), // FIX #11
 		"UPDATE users SET totp_enabled = true WHERE id = $1", userID,
 	)
 	if err != nil {

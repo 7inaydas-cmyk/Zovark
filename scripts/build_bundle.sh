@@ -39,9 +39,9 @@ echo "[1/6] Manifest created"
 
 # 2. Docker images
 echo "[2/6] Exporting Docker images..."
-docker save hydra-mvp-api:latest | gzip > "$BUNDLE_DIR/api.tar.gz"
-docker save hydra-mvp-worker:latest | gzip > "$BUNDLE_DIR/worker.tar.gz"
-docker save hydra-mvp-dashboard:latest | gzip > "$BUNDLE_DIR/dashboard.tar.gz"
+docker save zovark-api:latest | gzip > "$BUNDLE_DIR/api.tar.gz"
+docker save zovark-worker:latest | gzip > "$BUNDLE_DIR/worker.tar.gz"
+docker save zovark-dashboard:latest | gzip > "$BUNDLE_DIR/dashboard.tar.gz"
 echo "  Images exported ($(du -sh "$BUNDLE_DIR"/*.tar.gz | awk '{sum+=$1}END{print sum}' 2>/dev/null || echo '?'))"
 
 # 3. Migrations

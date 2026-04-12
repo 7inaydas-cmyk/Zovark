@@ -76,7 +76,7 @@ def flush_dedup():
     import subprocess
     subprocess.run(
         ["docker", "compose", "exec", "-T", "redis",
-         "redis-cli", "-a", "hydra-redis-dev-2026", "FLUSHDB"],
+         "valkey-cli", "-a", "hydra-redis-dev-2026", "FLUSHDB"],
         capture_output=True,
     )
 

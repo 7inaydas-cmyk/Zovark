@@ -175,9 +175,18 @@ func ssoLoginHandler(c *gin.Context) {
 	verifier, challenge := generatePKCE()
 	state := generateState()
 
-	// Store verifier and state in a short-lived cookie
-	c.SetCookie("oidc_verifier", verifier, 600, "/", "", false, true)
-	c.SetCookie("oidc_state", state, 600, "/", "", false, true)
+	// FIX #9: store OIDC state server-side in Redis (short TTL) to prevent cookie injection CSRF
+	// FIX #10: set Secure=true on cookies (behind TLS-terminating proxy)
+	secureCookie := getEnvOrDefault("ZOVARK_COOKIE_SECURE", "true") != "false"
+	sessionID := uuid.New().String()
+	stateKey := "oidc_state:" + sessionID
+	verifierKey := "oidc_verifier:" + sessionID
+	if redisClient != nil {
+		_ = redisClient.SetEx(c.Request.Context(), stateKey, state, 600*time.Second)
+		_ = redisClient.SetEx(c.Request.Context(), verifierKey, verifier, 600*time.Second)
+	}
+	// Store only the session ID in the cookie (not the state value itself)
+	c.SetCookie("oidc_session", sessionID, 600, "/", "", secureCookie, true)
 
 	// Build authorization URL
 	params := url.Values{
@@ -203,10 +212,21 @@ func ssoCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	// Validate state
+	// FIX #9: validate state from Redis (server-side), not from cookie
 	state := c.Query("state")
-	savedState, err := c.Cookie("oidc_state")
-	if err != nil || state != savedState {
+	sessionID, err := c.Cookie("oidc_session")
+	if err != nil || sessionID == "" {
+		respondError(c, http.StatusBadRequest, "INVALID_STATE", "Invalid or missing OIDC session")
+		return
+	}
+	var savedState, savedVerifier string
+	if redisClient != nil {
+		savedState, _ = redisClient.Get(c.Request.Context(), "oidc_state:"+sessionID).Result()
+		savedVerifier, _ = redisClient.Get(c.Request.Context(), "oidc_verifier:"+sessionID).Result()
+		// Delete keys immediately (single-use)
+		_ = redisClient.Del(c.Request.Context(), "oidc_state:"+sessionID, "oidc_verifier:"+sessionID)
+	}
+	if savedState == "" || state != savedState {
 		respondError(c, http.StatusBadRequest, "INVALID_STATE", "Invalid or missing state parameter")
 		return
 	}
@@ -222,9 +242,9 @@ func ssoCallbackHandler(c *gin.Context) {
 		return
 	}
 
-	// Get PKCE verifier
-	verifier, err := c.Cookie("oidc_verifier")
-	if err != nil {
+	// Get PKCE verifier — FIX #9: already retrieved from Redis above as savedVerifier
+	verifier := savedVerifier
+	if verifier == "" {
 		respondError(c, http.StatusBadRequest, "MISSING_VERIFIER", "PKCE verifier not found")
 		return
 	}
@@ -330,11 +350,13 @@ func ssoCallbackHandler(c *gin.Context) {
 		return
 	}
 
+	// FIX #10: Secure: true unconditionally (behind TLS-terminating proxy)
+	ssoSecureCookie := getEnvOrDefault("ZOVARK_COOKIE_SECURE", "true") != "false"
 	http.SetCookie(c.Writer, &http.Cookie{
 		Name:     "refresh_token",
 		Value:    refreshTokenString,
 		HttpOnly: true,
-		Secure:   c.Request.TLS != nil,
+		Secure:   ssoSecureCookie,
 		SameSite: http.SameSiteStrictMode,
 		MaxAge:   7 * 24 * 60 * 60,
 		Path:     "/",

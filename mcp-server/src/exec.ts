@@ -6,7 +6,7 @@ const execFileAsync = promisify(execFile);
 
 const PROJECT_DIR =
   process.env.ZOVARK_PROJECT_DIR ||
-  "C:/Users/vinay/Desktop/HYDRA/hydra-mvp";
+  "."; // Set ZOVARK_PROJECT_DIR env var to your project root
 
 export async function dockerComposeExec(
   service: string,

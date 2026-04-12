@@ -22,13 +22,13 @@ npm run build
 ### Claude Code
 
 ```bash
-claude mcp add zovark -- node C:/Users/vinay/Desktop/HYDRA/hydra-mvp/mcp-server/dist/index.js
+claude mcp add zovark -- node /path/to/zovark/mcp-server/dist/index.js
 ```
 
 Or with environment variables:
 
 ```bash
-claude mcp add zovark -e ZOVARK_DB_URL=postgresql://zovark:hydra_dev_2026@localhost:5432/zovark -e ZOVARK_API_URL=http://localhost:8090 -e ZOVARK_PROJECT_DIR=C:/Users/vinay/Desktop/HYDRA/hydra-mvp -- node C:/Users/vinay/Desktop/HYDRA/hydra-mvp/mcp-server/dist/index.js
+claude mcp add zovark -e ZOVARK_DB_URL=postgresql://zovark:hydra_dev_2026@localhost:5432/zovark -e ZOVARK_API_URL=http://localhost:8090 -e ZOVARK_PROJECT_DIR=/path/to/zovark -- node /path/to/zovark/mcp-server/dist/index.js
 ```
 
 ### Claude Desktop
@@ -40,11 +40,11 @@ Add to `claude_desktop_config.json`:
   "mcpServers": {
     "zovark": {
       "command": "node",
-      "args": ["C:/Users/vinay/Desktop/HYDRA/hydra-mvp/mcp-server/dist/index.js"],
+      "args": ["/path/to/zovark/mcp-server/dist/index.js"],
       "env": {
         "ZOVARK_DB_URL": "postgresql://zovark:hydra_dev_2026@localhost:5432/zovark",
         "ZOVARK_API_URL": "http://localhost:8090",
-        "ZOVARK_PROJECT_DIR": "C:/Users/vinay/Desktop/HYDRA/hydra-mvp"
+        "ZOVARK_PROJECT_DIR": "/path/to/zovark"
       }
     }
   }
@@ -95,7 +95,7 @@ Add to MCP settings with the same command and args as above.
 |----------|---------|-------------|
 | `ZOVARK_DB_URL` | `postgresql://zovark:hydra_dev_2026@localhost:5432/zovark` | Postgres connection string |
 | `ZOVARK_API_URL` | `http://localhost:8090` | Go API base URL |
-| `ZOVARK_PROJECT_DIR` | `C:/Users/vinay/Desktop/HYDRA/hydra-mvp` | Project root for docker compose |
+| `ZOVARK_PROJECT_DIR` | `/path/to/zovark` | Project root for docker compose |
 
 ## Self-Test
 

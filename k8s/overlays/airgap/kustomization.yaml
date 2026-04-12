@@ -12,8 +12,8 @@ images:
   - name: edoburu/pgbouncer
     newName: internal-registry.local:5000/zovark/pgbouncer
     newTag: latest
-  - name: redis
-    newName: internal-registry.local:5000/zovark/redis
+  - name: valkey/valkey  # FIX #14: was redis
+    newName: internal-registry.local:5000/zovark/valkey
     newTag: 7-alpine
   - name: temporalio/auto-setup
     newName: internal-registry.local:5000/zovark/temporal-auto-setup

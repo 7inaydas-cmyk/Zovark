@@ -23,7 +23,7 @@ except ImportError:
 FAST_FILL = os.environ.get("ZOVARK_FAST_FILL", "false").lower() == "true"
 
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://:zovark-redis-dev-2026@redis:6379/0")
+REDIS_URL = os.environ.get("REDIS_URL", "redis://:hydra-redis-dev-2026@redis:6379/0")
 
 
 def _get_redis():
@@ -115,9 +115,10 @@ def _update_task_status(conn, task_id: str, status: str, output: dict,
     elif status != "completed":
         needs_review = True
         review_reason = error_message or "Investigation failed"
-    elif risk_score < human_review_threshold:
+    elif risk_score >= human_review_threshold:
+        # FIX LOGIC-001: flag HIGH-risk investigations for review (was inverted — was using <)
         needs_review = True
-        review_reason = f"Risk score {risk_score} below threshold {human_review_threshold}"
+        review_reason = f"Risk score {risk_score} at or above threshold {human_review_threshold}"
 
     with conn.cursor() as cur:
         # Critical write: ensure WAL flush before acknowledging

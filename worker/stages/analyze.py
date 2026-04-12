@@ -43,7 +43,7 @@ ZOVARK_MODE = os.getenv("ZOVARK_MODE", "full")  # "full" or "templates-only"
 ZOVARK_LLM_ENDPOINT = os.environ.get("ZOVARK_LLM_ENDPOINT", "http://zovark-inference:8080/v1/chat/completions")
 try:
     from settings import settings as _settings
-    ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", _settings.llm_key)
+    ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", _settings.llm_key.get_secret_value())
     DATABASE_URL = os.environ.get("DATABASE_URL", _settings.database_url)
 except ImportError:
     ZOVARK_LLM_KEY = os.environ.get("ZOVARK_LLM_KEY", "sk-zovark-dev-2026")

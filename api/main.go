@@ -15,11 +15,11 @@ var (
 )
 
 type Config struct {
-	Port             string
-	DatabaseURL      string
-	TemporalAddress  string
-	LLMKey string
-	JWTSecret        string
+	Port            string
+	DatabaseURL     string
+	TemporalAddress string
+	LLMKey          string
+	JWTSecret       string
 	// OIDC/SSO configuration
 	OIDCIssuerURL    string
 	OIDCClientID     string
@@ -37,11 +37,11 @@ type Config struct {
 
 func init() {
 	appConfig = &Config{
-		Port:             getEnvOrDefault("PORT", "8090"),
-		DatabaseURL:      getEnvOrDefault("DATABASE_URL", "postgresql://zovark:zovark_dev_2026@postgres:5432/zovark"),
-		TemporalAddress:  getEnvOrDefault("TEMPORAL_ADDRESS", "temporal:7233"),
-		LLMKey: getEnvOrDefault("ZOVARK_LLM_KEY", ""),
-		JWTSecret:        getEnvOrDefault("JWT_SECRET", ""),
+		Port:            getEnvOrDefault("PORT", "8090"),
+		DatabaseURL:     getEnvOrDefault("DATABASE_URL", "postgresql://zovark:hydra_dev_2026@postgres:5432/zovark"), // FIX #17
+		TemporalAddress: getEnvOrDefault("TEMPORAL_ADDRESS", "temporal:7233"),
+		LLMKey:          getEnvOrDefault("ZOVARK_LLM_KEY", ""),
+		JWTSecret:       getEnvOrDefault("JWT_SECRET", ""),
 		// OIDC
 		OIDCIssuerURL:    getEnvOrDefault("OIDC_ISSUER_URL", ""),
 		OIDCClientID:     getEnvOrDefault("OIDC_CLIENT_ID", ""),

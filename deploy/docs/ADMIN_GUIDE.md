@@ -78,7 +78,7 @@ docker compose exec -T postgres pg_dump -U zovark -d zovark --data-only -Fc > \
 Add to crontab (`crontab -e`):
 
 ```cron
-0 2 * * * cd /path/to/hydra-mvp && docker compose exec -T postgres pg_dump -U zovark -d zovark -Fc > /backups/zovark_$(date +\%Y\%m\%d).dump 2>&1
+0 2 * * * cd /path/to/zovark && docker compose exec -T postgres pg_dump -U zovark -d zovark -Fc > /backups/zovark_$(date +\%Y\%m\%d).dump 2>&1
 # Keep last 30 days
 0 3 * * * find /backups -name "zovark_*.dump" -mtime +30 -delete
 ```

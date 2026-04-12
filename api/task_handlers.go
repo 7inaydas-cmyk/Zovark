@@ -27,7 +27,7 @@ func getWorkflowName() string {
 	if v := os.Getenv("ZOVARK_WORKFLOW_VERSION"); v != "" {
 		return v
 	}
-	return "ExecuteTaskWorkflow"
+	return "InvestigationWorkflowV2" // FIX #1: default to V2 pipeline
 }
 
 // Types
@@ -611,14 +611,18 @@ func uploadTaskHandler(c *gin.Context) {
 
 	// Insert into agent_tasks inside explicit transaction
 	// CRITICAL: tx.Commit() MUST happen BEFORE ExecuteWorkflow() to avoid race condition
-	tx, err := dbPool.Begin(c.Request.Context())
+	// FIX RLS-001: use beginTenantTx so SET LOCAL app.current_tenant is applied before any INSERT
+	dbCtx, dbCancel := dbContextWithTimeout(c.Request.Context())
+	defer dbCancel()
+
+	tx, err := beginTenantTx(dbCtx, tenantID)
 	if err != nil {
 		respondInternalError(c, err, "begin upload task transaction")
 		return
 	}
-	defer tx.Rollback(c.Request.Context()) // no-op after commit
+	defer tx.Rollback(dbCtx) // no-op after commit
 
-	_, err = tx.Exec(c.Request.Context(),
+	_, err = tx.Exec(dbCtx,
 		"INSERT INTO agent_tasks (id, tenant_id, task_type, input, status, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
 		taskID, tenantID, taskType, inputJSON, "pending", time.Now(),
 	)
@@ -628,13 +632,13 @@ func uploadTaskHandler(c *gin.Context) {
 	}
 
 	// Audit log (inside same transaction)
-	_, _ = tx.Exec(c.Request.Context(),
+	_, _ = tx.Exec(dbCtx,
 		"INSERT INTO agent_audit_log (tenant_id, action, resource_type, resource_id) VALUES ($1, $2, $3, $4)",
 		tenantID, "task_created", "task", taskID,
 	)
 
 	// COMMIT — data now visible to all connections (including worker's fetch_task)
-	if err := tx.Commit(c.Request.Context()); err != nil {
+	if err := tx.Commit(dbCtx); err != nil {
 		respondInternalError(c, err, "commit upload task transaction")
 		return
 	}
@@ -921,13 +925,17 @@ func bulkCreateTasksHandler(c *gin.Context) {
 	}
 
 	// Create all tasks in a transaction
+	// FIX RLS-001: use beginTenantTx so SET LOCAL app.current_tenant is applied before any INSERT
 	ctx := c.Request.Context()
-	tx, err := dbPool.Begin(ctx)
+	dbCtx, dbCancel := dbContextWithTimeout(ctx)
+	defer dbCancel()
+
+	tx, err := beginTenantTx(dbCtx, tenantID)
 	if err != nil {
 		respondInternalError(c, err, "begin bulk task transaction")
 		return
 	}
-	defer tx.Rollback(ctx)
+	defer tx.Rollback(dbCtx)
 
 	var taskIDs []string
 	var workflowIDs []string
@@ -936,7 +944,7 @@ func bulkCreateTasksHandler(c *gin.Context) {
 		taskID := uuid.New().String()
 		taskIDs = append(taskIDs, taskID)
 
-		_, err := tx.Exec(ctx,
+		_, err := tx.Exec(dbCtx,
 			"INSERT INTO agent_tasks (id, tenant_id, task_type, input, status, created_at) VALUES ($1, $2, $3, $4, $5, $6)",
 			taskID, tenantID, task.TaskType, task.Input, "pending", time.Now(),
 		)
@@ -946,13 +954,13 @@ func bulkCreateTasksHandler(c *gin.Context) {
 		}
 
 		// Audit log
-		_, _ = tx.Exec(ctx,
+		_, _ = tx.Exec(dbCtx,
 			"INSERT INTO agent_audit_log (tenant_id, action, resource_type, resource_id) VALUES ($1, $2, $3, $4)",
 			tenantID, "task_created", "task", taskID,
 		)
 	}
 
-	if err := tx.Commit(ctx); err != nil {
+	if err := tx.Commit(dbCtx); err != nil {
 		respondInternalError(c, err, "commit bulk task transaction")
 		return
 	}

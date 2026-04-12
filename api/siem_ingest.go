@@ -290,6 +290,7 @@ func splunkIngestHandler(c *gin.Context) {
 	)
 
 	// Build input map for the investigation
+	// FIX #5: sanitize all string values in siem_event before storing
 	input := map[string]interface{}{
 		"severity":    severity,
 		"source_ip":   sourceIP,
@@ -298,7 +299,7 @@ func splunkIngestHandler(c *gin.Context) {
 		"sourcetype":  payload.SourceType,
 		"host":        payload.Host,
 		"siem_vendor": "splunk",
-		"siem_event":  payload.Event,
+		"siem_event":  sanitizeSIEMMap(payload.Event),
 	}
 
 	// Include raw event data if present
@@ -421,6 +422,7 @@ func elasticIngestHandler(c *gin.Context) {
 	)
 
 	// Build input map
+	// FIX #5: sanitize all string values in siem_event before storing
 	input := map[string]interface{}{
 		"severity":         severity,
 		"source_ip":        sourceIP,
@@ -430,7 +432,7 @@ func elasticIngestHandler(c *gin.Context) {
 		"rule_name":        ruleName,
 		"rule_description": ruleDescription,
 		"siem_vendor":      "elastic",
-		"siem_event":       payload,
+		"siem_event":       sanitizeSIEMMap(payload),
 	}
 
 	if message != "" {

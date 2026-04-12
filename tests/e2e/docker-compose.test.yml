@@ -23,13 +23,13 @@ services:
       - zovark-test
 
   redis:
-    image: redis:7-alpine
+    image: valkey/valkey:7-alpine
     container_name: zovark-test-redis
-    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+    command: valkey-server --maxmemory 64mb --maxmemory-policy allkeys-lru
     ports:
       - "6380:6379"
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "valkey-cli", "ping"]
       interval: 5s
       timeout: 3s
       retries: 5

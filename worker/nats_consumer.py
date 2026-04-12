@@ -167,21 +167,52 @@ class NATSAlertConsumer:
                     alert_type=data.get("type", "unknown"),
                     tenant_id=data.get("tenant_id", "unknown"))
 
-    def process_alert(self, msg: dict) -> None:
+    def process_alert(self, subject: str, data: dict) -> None:
         """Parse, validate, and submit alert to Temporal.
 
-        This is a convenience method for external callers.
-        In practice, the message loop calls _process_message directly.
+        Called by the NATS message loop for every message on ALERTS.>.
+        Starts an InvestigationWorkflowV2 workflow for each valid alert.
         """
+        # FIX BUG-001: implement Temporal dispatch so alerts are not silently dropped
         required_fields = ["tenant_id", "alert_type"]
         for field in required_fields:
-            if field not in msg:
-                logger.warn("NATS alert missing required field", field=field)
+            if field not in data:
+                logger.warn("NATS alert missing required field", field=field, subject=subject)
                 return
 
+        tenant_id = data.get("tenant_id")
+        alert_type = data.get("alert_type")
+
         logger.info("Processing NATS alert",
-                    tenant_id=msg.get("tenant_id"),
-                    alert_type=msg.get("alert_type"))
+                    subject=subject,
+                    tenant_id=tenant_id,
+                    alert_type=alert_type)
+
+        try:
+            from temporalio.client import Client
+            import asyncio
+
+            async def _start():
+                temporal_address = os.environ.get("TEMPORAL_ADDRESS", "temporal:7233")
+                client = await Client.connect(temporal_address)
+                task_id = data.get("task_id") or __import__("uuid").uuid4().hex
+                await client.start_workflow(
+                    "InvestigationWorkflowV2",
+                    {"task_id": task_id, "tenant_id": tenant_id, "alert_type": alert_type, **data},
+                    id=f"nats-{task_id}",
+                    task_queue="zovark-tasks",
+                )
+                logger.info("NATS alert dispatched to Temporal",
+                            workflow_id=f"nats-{task_id}",
+                            tenant_id=tenant_id)
+
+            asyncio.run(_start())
+
+        except Exception as e:
+            logger.error("NATS alert dispatch failed",
+                         subject=subject,
+                         tenant_id=tenant_id,
+                         error=str(e))
 
     def ack(self, reply_to: str) -> None:
         """Acknowledge a processed message (for JetStream)."""
@@ -340,7 +371,9 @@ def create_nats_consumer(worker_id: str = "unknown") -> NATSAlertConsumer:
     if nats_url:
         consumer.connect()
         if consumer.connected:
-            consumer.subscribe("ALERTS.>")
+            # FIX BUG-001: pass process_alert as handler so every received alert
+            # starts a Temporal InvestigationWorkflowV2 instead of being silently dropped
+            consumer.subscribe("ALERTS.>", handler=consumer.process_alert)
             consumer.start_listening()
     else:
         logger.info("NATS_URL not configured, NATS consumer disabled")

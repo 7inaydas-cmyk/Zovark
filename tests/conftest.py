@@ -36,7 +36,7 @@ def api_token():
 def flush_dedup():
     try:
         subprocess.run(
-            ["docker", "compose", "exec", "-T", "redis", "redis-cli",
+            ["docker", "compose", "exec", "-T", "redis", "valkey-cli",
              "-a", REDIS_PASSWORD, "--no-auth-warning",
              "EVAL", "local keys = redis.call('keys', 'dedup:*'); for _,k in ipairs(keys) do redis.call('del', k) end; return #keys", "0"],
             capture_output=True, text=True, timeout=5

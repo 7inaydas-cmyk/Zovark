@@ -52,7 +52,7 @@ func runStatus(cmd *cobra.Command, args []string) {
 	services := []struct{ name, key string }{
 		{"API", "api"},
 		{"PostgreSQL", "postgres"},
-		{"Redis", "redis"},
+		{"Valkey", "redis"},
 		{"Temporal", "temporal"},
 	}
 

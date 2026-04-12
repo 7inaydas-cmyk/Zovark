@@ -178,7 +178,7 @@ func requestMCPApprovalHandler(c *gin.Context) {
 	primaryKey := "zovark:approval:" + token
 	indexKey := "zovark:approval:id:" + approvalID
 
-	ctx := context.Background()
+	ctx := c.Request.Context() // FIX #11
 	if redisErr := redisClient.SetEx(ctx, primaryKey, string(approvalJSON), 1800*time.Second).Err(); redisErr != nil {
 		respondInternalError(c, redisErr, "store mcp approval in redis")
 		return
@@ -213,7 +213,7 @@ func checkMCPApprovalHandler(c *gin.Context) {
 	token := c.Param("token")
 	callerTenantID := c.MustGet("tenant_id").(string)
 
-	ctx := context.Background()
+	ctx := c.Request.Context() // FIX #11
 	raw, err := redisClient.Get(ctx, "zovark:approval:"+token).Result()
 	if err != nil {
 		c.JSON(http.StatusOK, gin.H{
@@ -258,7 +258,7 @@ func listMCPApprovalsHandler(c *gin.Context) {
 		filterTenant = callerTenantID
 	}
 
-	ctx := context.Background()
+	ctx := c.Request.Context() // FIX #11
 	keys, err := redisClient.Keys(ctx, "zovark:approval:*").Result()
 	if err != nil {
 		log.Printf("[WARN] listMCPApprovals: Redis KEYS error: %v", err)
