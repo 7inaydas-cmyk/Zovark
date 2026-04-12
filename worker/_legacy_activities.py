@@ -58,6 +58,12 @@ def _return_connection(conn, tier="normal"):
     """Return a connection to its pool (or close if no pool)."""
     pool = _pools.get(tier) or _pools.get("normal")
     if pool is not None:
+        try:
+            pool.putconn(conn)
+        except Exception:
+            _return_connection(conn)
+    else:
+        _return_connection(conn)
 
 
 def _get_llm_key() -> str:
@@ -67,12 +73,6 @@ def _get_llm_key() -> str:
         return os.environ.get("ZOVARK_LLM_KEY", _s.llm_key.get_secret_value())
     except Exception:
         return os.environ.get("ZOVARK_LLM_KEY", "")
-        try:
-            pool.putconn(conn)
-        except Exception:
-            _return_connection(conn)
-    else:
-        _return_connection(conn)
 
 
 def _sync_commit(cur):
