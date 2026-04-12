@@ -60,10 +60,13 @@ def _return_connection(conn, tier="normal"):
     if pool is not None:
         try:
             pool.putconn(conn)
+            return
         except Exception:
-            _return_connection(conn)
-    else:
-        _return_connection(conn)
+            pass
+    try:
+        conn.close()
+    except Exception:
+        pass
 
 
 def _get_llm_key() -> str:
